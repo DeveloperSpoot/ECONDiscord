@@ -5,7 +5,7 @@
     "dayjs": "^1.11.9",
     "discord-api-types": "^0.37.3",
     "discord.js": "^14.15.3",
-    "dotenv": "^16.0.3",
+    "dotenv": "^16.6.1",
     "firebase-admin": "^11.0.0",
     "keyv": "^4.3.3",
     "node-fetch": "^2.7.0",

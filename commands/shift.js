@@ -1,147 +1,169 @@
-const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, AttachmentBuilder,} = require("discord.js");
-const {activeBusiness, activeDepartment} = require("../dataCrusher/Headquarters").CacheManager;
-const {ErrorEmbed} = require("../utils/embedUtil");
-const {RetrieveData, BusinessHQ, CreateData, UpdateData, UserHQ} = require("../dataCrusher/Headquarters.js");
-const {PermManager, DepartmentHQ, GuildHQ} = require("../dataCrusher/Headquarters");
-const {activeShifts} = require("../dataCrusher/services/cache");
-const {csvGenerator} = require("../utils/csvGenerator");
-const {currentPromotion} = require("../utils/PromotionUtil");
-const MoneyFormat = new Intl.NumberFormat('en-us', {currency: 'USD', style: 'currency'})
+const { Interaction, EmbedBuilder, SlashCommandBuilder, Colors, AttachmentBuilder, } = require("discord.js");
+const { activeBusiness, activeDepartment } = require("../dataCrusher/Headquarters").CacheManager;
+const { ErrorEmbed } = require("../utils/embedUtil");
+const { RetrieveData, BusinessHQ, CreateData, UpdateData, UserHQ } = require("../dataCrusher/Headquarters.js");
+const { PermManager, DepartmentHQ, GuildHQ } = require("../dataCrusher/Headquarters");
+const { activeShifts } = require("../dataCrusher/services/cache");
+const { csvGenerator } = require("../utils/csvGenerator");
+const { currentPromotion } = require("../utils/PromotionUtil");
+const MoneyFormat = new Intl.NumberFormat('en-us', { currency: 'USD', style: 'currency' })
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("shift")
         .setDescription("Command used to view and interact with shifts..")
+
+        //  Clokcing In / Out Command
         .addSubcommand((subCmd) =>
             subCmd.setName('clock').setDescription('Used to clock In & Out.')
                 .addStringOption((stringOp) =>
                     stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) to use for this shift.').setRequired(true)
                         .addChoices(
-                            {name: 'Business', value: 'business'},
-                            {name: 'Department', value: 'department'}
+                            { name: 'Business', value: 'business' },
+                            { name: 'Department', value: 'department' }
                         ))
                 .addStringOption((stringOp) =>
                     stringOp.setName("action").setDescription('Would you like to Clock-In or Clock-Out?')
                         .setRequired(true)
                         .addChoices(
-                            {name: 'clock-in', value: 'IN'},
-                            {name: 'clock-out', value: 'OUT'}
+                            { name: 'clock-in', value: 'IN' },
+                            { name: 'clock-out', value: 'OUT' }
                         )
                 ))
+
+        //  Viewing Shifts
         .addSubcommand(subCmd =>
             subCmd.setName('view')
                 .setDescription('View selected shift.')
                 .addStringOption((stringOp) =>
                     stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                         .addChoices(
-                            {name: 'Business', value: 'business'},
-                            {name: 'Department', value: 'department'}
+                            { name: 'Business', value: 'business' },
+                            { name: 'Department', value: 'department' }
                         ))
                 .addUserOption(userOp =>
                     userOp.setName('user').setDescription('Would you like to view all shift logs of another user?').setRequired(false)
                 ))
 
+        //  Stats
         .addSubcommand(subCmd =>
             subCmd.setName('stats')
                 .setDescription('View the shift stats for any given entity.')
                 .addStringOption((stringOp) =>
                     stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                         .addChoices(
-                            {name: 'Business', value: 'business'},
-                            {name: 'Department', value: 'department'}
+                            { name: 'Business', value: 'business' },
+                            { name: 'Department', value: 'department' }
                         )))
+
+        //  User Stats
         .addSubcommand(subCmd =>
             subCmd.setName('user-stats')
                 .setDescription('View the shift stats for any given entity.')
                 .addStringOption((stringOp) =>
                     stringOp.setName('entity-type').setDescription('Type of entity that should be used to retrieve your shifts. Or retrieve all your shifts.').setRequired(true)
                         .addChoices(
-                            {name: 'Business', value: 'business'},
-                            {name: 'Department', value: 'department'},
-                            {name: "ALL", value: "all"}
+                            { name: 'Business', value: 'business' },
+                            { name: 'Department', value: 'department' },
+                            { name: "ALL", value: "all" }
                         ))
                 .addUserOption(userOp => userOp.setName('user').setDescription('The user that you would like to view stats for.').setRequired(false))
         )
+
+        //  Export Shifts
         .addSubcommand(subCmd =>
             subCmd.setName('export')
                 .setDescription('Export a record of shifts submitted in a payroll format.')
                 .addStringOption((stringOp) =>
                     stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                         .addChoices(
-                            {name: 'Business', value: 'business'},
-                            {name: 'Department', value: 'department'}
+                            { name: 'Business', value: 'business' },
+                            { name: 'Department', value: 'department' }
                         ))
                 .addStringOption((stringOp) =>
                     stringOp.setName('format').setDescription('Would you like to view an embed version or export to a CSV file?').setRequired(true)
                         .addChoices(
-                            {name: 'CSV', value: 'csv'},
-                            {name: 'Embed', value: 'embed'}
+                            { name: 'CSV', value: 'csv' },
+                            { name: 'Embed', value: 'embed' }
                         ))
         )
 
+        //  Pay Commands
         .addSubcommandGroup(group =>
             group.setName('pay').setDescription('All payment methods.')
+
+                //  Execute Payroll
                 .addSubcommand(subCmd =>
                     subCmd.setName('execute-payroll').setDescription('Execute Payroll Through ECON Shifts.')
                         .addStringOption((stringOp) =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 ))
-                        .addStringOption((stringOp)=>
+                        .addStringOption((stringOp) =>
                             stringOp.setName('from').setDescription("Payroll start date, formatted as XX/XX/XX, UTC.").setRequired(true))
-                        .addStringOption((stringOp)=>
+                        .addStringOption((stringOp) =>
                             stringOp.setName('to').setDescription("Payroll end date, formatted as XX/XX/XX, UTC.").setRequired(true)))
         )
 
+        //  Manage Shifts Commands
         .addSubcommandGroup(group =>
             group.setName('manage').setDescription('Manage Shifts.')
+                
+                // Add Role-Based Pay
                 .addSubcommand(subCmd =>
                     subCmd.setName('add-role-pay').setDescription('Bind a role with additional pay, on top of base pay.')
                         .addStringOption((stringOp) =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 ))
                         .addRoleOption(roleOp => roleOp.setName('role').setDescription('The role to be bound with additional pay.').setRequired(true))
                         .addNumberOption(numberOp => numberOp.setName('amount').setDescription('The amount to be bound with the role.').setRequired(true)))
+                
+                //  Remove Role-Based Pay
                 .addSubcommand(subCmd =>
                     subCmd.setName('remove-role-pay').setDescription('Remove a role with additional pay.')
                         .addStringOption((stringOp) =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 ))
                         .addRoleOption(roleOp => roleOp.setName('role').setDescription('The role to be removed from additional pay.').setRequired(true)))
+        
+                // View Additional Pay
                 .addSubcommand(subCmd =>
                     subCmd.setName('view-additional-pay').setDescription('View all additional pay binded with roles.')
                         .addStringOption(stringOp =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 )))
+
+                // Set Base Pay
                 .addSubcommand(subCmd =>
                     subCmd.setName('set-base').setDescription('The the amount that should be paid as the base hourly rate.')
                         .addStringOption((stringOp) =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 ))
                         .addNumberOption(numberOp => numberOp.setName('amount').setDescription('The amount to be paid.').setRequired(true)))
 
+                //  Remove Shift
                 .addSubcommand(subCmd =>
                     subCmd.setName('remove-shift')
                         .setDescription(`Remove a shift record from a user.`)
                         .addStringOption(stringOp =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 ))
 
                         .addUserOption(userOp => userOp.setName('user').setDescription('The user that you would like to delete a shift record from.').setRequired(true))
@@ -150,24 +172,27 @@ module.exports = {
                             stringOp.setName('shift').setDescription('The shift to be removed. Search by start date & time. (en-us, UTC)').setRequired(true)
                                 .setAutocomplete(true)))
 
+                //  Clear Shifts
                 .addSubcommand(subCmd =>
                     subCmd.setName('clear-shifts')
                         .setDescription(`Remove all shift from an entity, to reset the pay period.`)
                         .addStringOption(stringOp =>
                             stringOp.setName('entity-type').setDescription('Type of entity (Business or Department) that should be used to retrieve your shifts.').setRequired(true)
                                 .addChoices(
-                                    {name: 'Business', value: 'business'},
-                                    {name: 'Department', value: 'department'}
+                                    { name: 'Business', value: 'business' },
+                                    { name: 'Department', value: 'department' }
                                 )))
         )
     ,
+
+    //  AUTOCOMPLETE
     async autocomplete(interaction) {
 
         const focusedOption = interaction.options.getFocused(true);
         const Treasury = await RetrieveData.treasury(interaction.IDENT, false)
         switch (focusedOption.name) {
             case "sort-by-department": {
-                const choices = await Treasury.getDepartments({raw: true});
+                const choices = await Treasury.getDepartments({ raw: true });
                 if (choices.length === 0) {
                     return await interaction.respond([{
                         name: "Error, no departments exist in this economy.",
@@ -178,7 +203,7 @@ module.exports = {
                     return choice.name.toLowerCase().startsWith(focusedOption.value.toLowerCase())
                 });
                 await interaction.respond(
-                    filtered.map(choice => ({name: choice.name, value: choice.IDENT})),
+                    filtered.map(choice => ({ name: choice.name, value: choice.IDENT })),
                 );
             }
                 break
@@ -195,14 +220,14 @@ module.exports = {
                     return choice.name.toLowerCase().startsWith(focusedOption.value.toLowerCase())
                 });
                 await interaction.respond(
-                    filtered.map(choice => ({name: choice.name, value: choice.IDENT})),
+                    filtered.map(choice => ({ name: choice.name, value: choice.IDENT })),
                 );
             }
                 break
 
             case 'shift': {
                 console.warn(interaction.options.get('user'))
-                if(interaction.options.get('user') === null || interaction.options.get('entity-type') === null){
+                if (interaction.options.get('user') === null || interaction.options.get('entity-type') === null) {
                     return await interaction.respond([{
                         name: "Error, You must select a user/entity-type.",
                         value: "Error"
@@ -217,7 +242,7 @@ module.exports = {
                 const authorUser = await new UserHQ(interaction, interaction.user.id)
 
                 let Entity;
-                switch(interaction.options.getString('entity-type')){
+                switch (interaction.options.getString('entity-type')) {
                     case 'business': {
                         Entity = await authorUser.getBusiness()
                     } break
@@ -227,14 +252,14 @@ module.exports = {
                     }
                 }
 
-                if(Entity === null){
+                if (Entity === null) {
                     return await interaction.respond([{
                         name: "Error, You must set your business/department first.",
                         value: "Error"
                     }]);
                 }
 
-                const choices = await User.getShifts({IDENT: Entity});
+                const choices = await User.getShifts({ IDENT: Entity });
 
                 if (choices.length === 0) {
                     return await interaction.respond([{
@@ -243,25 +268,25 @@ module.exports = {
                     }]);
                 }
 
-                    if(focusedOption.value ===""){
-                        await interaction.respond(
-                            choices.map(choice => ({name: `Start: ${new Date(choice.start).toLocaleString('en-us', {timeZone: 'UTC'})} | End: ${new Date(choice.end).toLocaleString('en-us', {timeZone: 'UTC'})}`, value: choice.IDENT})),
-                        );
-                        return
-                    }
+                if (focusedOption.value === "") {
+                    await interaction.respond(
+                        choices.map(choice => ({ name: `Start: ${new Date(choice.start).toLocaleString('en-us', { timeZone: 'UTC' })} | End: ${new Date(choice.end).toLocaleString('en-us', { timeZone: 'UTC' })}`, value: choice.IDENT })),
+                    );
+                    return
+                }
 
                 const filtered = await choices.filter(choice => {
-                    const time = new Date(choice.start).toLocaleString('en-us', {timeZone: 'UTC'})
+                    const time = new Date(choice.start).toLocaleString('en-us', { timeZone: 'UTC' })
                     return String(time).includes(focusedOption.value)
                 });
 
-                    if(filtered.length === 0){
-                        return await interaction.respond(
-                            choices.map(choice => ({name: `Start: ${new Date(choice.start).toLocaleString('en-us', {timeZone: 'UTC'})} | End: ${new Date(choice.end).toLocaleString('en-us', {timeZone: 'UTC'})}`, value: choice.IDENT})),
-                        );
-                    }
+                if (filtered.length === 0) {
+                    return await interaction.respond(
+                        choices.map(choice => ({ name: `Start: ${new Date(choice.start).toLocaleString('en-us', { timeZone: 'UTC' })} | End: ${new Date(choice.end).toLocaleString('en-us', { timeZone: 'UTC' })}`, value: choice.IDENT })),
+                    );
+                }
                 await interaction.respond(
-                    filtered.map(choice => ({name: `Start: ${new Date(choice.start).toLocaleString('en-us', {timeZone: 'UTC'})} | End: ${new Date(choice.end).toLocaleString('en-us', {timeZone: 'UTC'})}`, value: choice.IDENT})),
+                    filtered.map(choice => ({ name: `Start: ${new Date(choice.start).toLocaleString('en-us', { timeZone: 'UTC' })} | End: ${new Date(choice.end).toLocaleString('en-us', { timeZone: 'UTC' })}`, value: choice.IDENT })),
                 );
             }
         }
@@ -272,7 +297,7 @@ module.exports = {
         const Type = interaction.options.getString('entity-type');
         let Entity = null;
         switch (Type) {
-            case 'all': {}
+            case 'all': { }
             case 'business': {
                 const activeUSER = await new UserHQ(interaction, interaction.user.id);
                 if (await activeUSER.getBusiness() == null) {
@@ -353,14 +378,14 @@ module.exports = {
                             return await ErrorEmbed(interaction, "Insufficient perms. You must have the Supervisor permissions.")
                         }
                         break
-                    }break
+                    } break
 
                     case 'clear-shifts': {
                         if ((await PermManager.Business.checkPerm(BUSINESS, interaction, 'supervisor') === false)) {
                             return await ErrorEmbed(interaction, "Insufficient perms. You must have the Supervisor permissions.")
                         }
                         break
-                    }break
+                    } break
                 }
 
                 Entity = BUSINESS
@@ -447,14 +472,14 @@ module.exports = {
                             return await ErrorEmbed(interaction, "Insufficient perms. You must have the Shift-Management permissions.")
                         }
 
-                    }break
+                    } break
 
                     case 'clear-shifts': {
                         if ((await PermManager.Department.checkPerm(interaction, DEPARTMENT, 'Shift-Management') === false)) {
                             return await ErrorEmbed(interaction, "Insufficient perms. You must have the Shift-Management permissions.")
                         }
 
-                    }break
+                    } break
                 }
 
                 Entity = DEPARTMENT
@@ -467,12 +492,12 @@ module.exports = {
         }
         const EntityName = await Entity.getName();
 
-        const MoneyFormat = new Intl.NumberFormat('en-us', {currency: 'USD', style: 'currency'})
+        const MoneyFormat = new Intl.NumberFormat('en-us', { currency: 'USD', style: 'currency' })
         const statusEmebed = new EmbedBuilder();
 
         switch (interaction.options.getSubcommand()) {
             case 'clock': {
-                await interaction.deferReply({ephemeral: false});
+                await interaction.deferReply({ ephemeral: false });
                 const guildManager = new GuildHQ(interaction);
                 const ispremium = await guildManager.getPremiumStatus();
                 const promoEmbed = await currentPromotion(ispremium);
@@ -505,10 +530,10 @@ module.exports = {
                             name: "TIME IN", value: "```" + timestamp.toLocaleTimeString('en-US', {
                                 timeZone: "UTC", timeZoneName: "short", hour12: false
                             }) + "```", inline: true
-                        }, {name: "TIME OUT", value: "```   -   ```", inline: true}])
+                        }, { name: "TIME OUT", value: "```   -   ```", inline: true }])
                             .setColor("#008b31")
 
-                        interaction.editReply({embeds: [ClockEmbed]})
+                        interaction.editReply({ embeds: [ClockEmbed] })
                     }
                         break
 
@@ -518,7 +543,7 @@ module.exports = {
                         }
 
                         if (activeShift.type !== Type) {
-                            return ErrorEmbed(interaction, "You selected **" + Type + "**, however you currently have an active **"+activeShift.type+" shift**. Please select that entityType to clock out.")
+                            return ErrorEmbed(interaction, "You selected **" + Type + "**, however you currently have an active **" + activeShift.type + " shift**. Please select that entityType to clock out.")
                         }
 
                         let ERROR = false
@@ -537,7 +562,7 @@ module.exports = {
                             }) + "```", inline: true
                         }])
                             .setColor("#8b0000")
-                        interaction.editReply({embeds: [ClockEmbed]})
+                        interaction.editReply({ embeds: [ClockEmbed] })
 
                         activeShift.end = timestamp
 
@@ -549,14 +574,14 @@ module.exports = {
 
 
 
-                        const processMessage = await interaction.channel.send({embeds: [processEmebed]}).catch(async err=>{
+                        const processMessage = await interaction.channel.send({ embeds: [processEmebed] }).catch(async err => {
                             await ErrorEmbed(interaction, err.message, false, true);
                             ClockEmbed.setColor("Red").setDescription(`ERROR: Unable To Process Shift, due to the following error: ${err.message}`).setTitle('TIME CARD ERROR')
-                             interaction.editReply({embeds: [ClockEmbed]})
+                            interaction.editReply({ embeds: [ClockEmbed] })
                             ERROR = true
                         });
 
-                        if(ERROR){
+                        if (ERROR) {
                             return
                         }
 
@@ -612,14 +637,14 @@ module.exports = {
 
                 const CSV = await csvGenerator(['entity', 'start', 'end'], Shifts)
 
-                const csvAttachment = new AttachmentBuilder(Buffer.from(CSV), {name: `${entityName}-${interaction.member.displayName}-Shifts.csv`})
+                const csvAttachment = new AttachmentBuilder(Buffer.from(CSV), { name: `${entityName}-${interaction.member.displayName}-Shifts.csv` })
 
                 const processEmebed = new EmbedBuilder()
                     .setDescription("<a:loading:1121922926313218120> Now attaching CSV record of shifts.")
                     .setColor("Orange")
 
-                interaction.editReply({embeds: [processEmebed]})
-                interaction.editReply({embeds: [], files: [csvAttachment], ephemeral: false})
+                interaction.editReply({ embeds: [processEmebed] })
+                interaction.editReply({ embeds: [], files: [csvAttachment], ephemeral: false })
             }
                 break
 
@@ -658,7 +683,7 @@ module.exports = {
                 stats.totalPayAmount = totalHours * payRate;
 
                 statsEmbed.addFields(
-                    {name: 'Total Logged Hours', value: "" + String(stats.totalLoggedHours) + "", inline: true},
+                    { name: 'Total Logged Hours', value: "" + String(stats.totalLoggedHours) + "", inline: true },
                     {
                         name: 'Total Base Labor Cost',
                         value: "" + String(await guildManager.formatMoney(stats.totalPayAmount)) + "", inline: true
@@ -667,13 +692,13 @@ module.exports = {
                         name: 'Total Logged Shifts', value: "" + String(stats.totalNumberOfShifts) + "",
                         inline: true
                     },
-                    {name: 'Average Logged Hours', value: "" + String(stats.averageHours) + "", inline: true},
+                    { name: 'Average Logged Hours', value: "" + String(stats.averageHours) + "", inline: true },
                     {
                         name: 'Average Base Labor Cost', value: "" + String(await guildManager.formatMoney(stats.averagePay)) + "",
                         inline: true
                     }
                 )
-                interaction.editReply({embeds: [statsEmbed]})
+                interaction.editReply({ embeds: [statsEmbed] })
 
             }
                 break
@@ -688,7 +713,7 @@ module.exports = {
                 await HQ_User.getIDENT();
 
 
-                if(interaction.options.getString('entity-type') === "all") {
+                if (interaction.options.getString('entity-type') === "all") {
                     const statsEmbed = new EmbedBuilder()
                         .setTitle(`${memberToCheck.displayName}'s Server Shift Statistics`)
                         .setColor("#cda86c")
@@ -698,7 +723,7 @@ module.exports = {
                         totalLoggedHours: null
                     };
 
-                    const Shifts = await  HQ_User.getShifts();
+                    const Shifts = await HQ_User.getShifts();
                     stats.totalNumberOfShifts = Shifts.length
 
                     let totalHours = 0;
@@ -716,15 +741,15 @@ module.exports = {
                     stats.averageHours = (totalHours / stats.totalNumberOfShifts).toFixed(2);
 
                     statsEmbed.addFields(
-                        {name: 'Total Logged Hours', value: "```" + String(stats.totalLoggedHours) + "```", inline: true},
+                        { name: 'Total Logged Hours', value: "```" + String(stats.totalLoggedHours) + "```", inline: true },
                         {
                             name: 'Total Logged Shifts', value: "```" + String(stats.totalNumberOfShifts) + "```",
                             inline: true
                         },
-                        {name: 'Average Logged Hours', value: "```" + String(stats.averageHours) + "```", inline: true},
+                        { name: 'Average Logged Hours', value: "```" + String(stats.averageHours) + "```", inline: true },
 
                     )
-                    interaction.editReply({embeds: [statsEmbed]})
+                    interaction.editReply({ embeds: [statsEmbed] })
                     return
                 }
 
@@ -756,15 +781,15 @@ module.exports = {
                 stats.averageHours = (totalHours / stats.totalNumberOfShifts).toFixed(2);
 
                 statsEmbed.addFields(
-                    {name: 'Logged Hours', value: "```" + String(stats.totalLoggedHours) + "```", inline: true},
+                    { name: 'Logged Hours', value: "```" + String(stats.totalLoggedHours) + "```", inline: true },
                     {
                         name: 'Logged Shifts', value: "```" + String(stats.totalNumberOfShifts) + "```",
                         inline: true
                     },
-                    {name: 'Average Logged Hours', value: "```" + String(stats.averageHours) + "```", inline: true},
+                    { name: 'Average Logged Hours', value: "```" + String(stats.averageHours) + "```", inline: true },
 
                 )
-                interaction.editReply({embeds: [statsEmbed]})
+                interaction.editReply({ embeds: [statsEmbed] })
 
             }
                 break
@@ -780,7 +805,7 @@ module.exports = {
                     await Entity.setBasePay(basePay);
                     statusEmebed.setColor('Green')
                         .setTitle(`\\✅ Successfully updated the base pay to ${await guildManager.formatMoney(basePay)} for \`\`${EntityName}\`\`.`)
-                    interaction.editReply({embeds: [statusEmebed]})
+                    interaction.editReply({ embeds: [statusEmebed] })
                 } catch (e) {
                     console.log(e)
                     await ErrorEmbed(interaction, e.message, false, false)
@@ -798,7 +823,7 @@ module.exports = {
                     await Entity.addRolePay(role, additionalPay);
                     statusEmebed.setColor('Green')
                         .setTitle(`\\✅ Successfully added ${await guildManager.formatMoney(additionalPay)} additional pay for ${role.name} under ${EntityName}.`)
-                    interaction.editReply({embeds: [statusEmebed]})
+                    interaction.editReply({ embeds: [statusEmebed] })
                 } catch (e) {
                     console.log(e)
                     await ErrorEmbed(interaction, e.message, false, false)
@@ -816,7 +841,7 @@ module.exports = {
                     await Entity.removeRolePay(role);
                     statusEmebed.setColor('Green')
                         .setTitle(`\\✅ Successfully removed additional pay from \`\`${role.name}\`\` under \`\`${EntityName}\`\`.`)
-                    interaction.editReply({embeds: [statusEmebed]})
+                    interaction.editReply({ embeds: [statusEmebed] })
                 } catch (e) {
                     console.log(e)
                     await ErrorEmbed(interaction, e.message, false, false)
@@ -832,7 +857,7 @@ module.exports = {
                     .setDescription("<a:loading:1121922926313218120> Fetching All Roles With Additional Pay.")
                     .setColor("Orange")
 
-                interaction.editReply({embeds: [processEmebed]})
+                interaction.editReply({ embeds: [processEmebed] })
 
                 const additionalPayRoles = await Entity.getAdditionalPayRoles();
                 let desc = "";
@@ -850,7 +875,7 @@ module.exports = {
                     .setColor("#60a181")
                     .setTimestamp()
 
-                interaction.editReply({embeds: [Embed]})
+                interaction.editReply({ embeds: [Embed] })
             }
                 break
 
@@ -860,7 +885,7 @@ module.exports = {
                     .setDescription("<a:loading:1121922926313218120> Fetching All Shifts Now & Roles With Additional Pay...")
                     .setColor("#a16060")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
                 const Shifts = await Entity.getShifts();
                 const additionalPayRoles = await Entity.getAdditionalPayRoles();
@@ -869,7 +894,7 @@ module.exports = {
                 processEmebed.setDescription("<a:loading:1121922926313218120> Processing All Shifts Now...")
                     .setColor("#a18560")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
                 let Users = {}
 
@@ -890,12 +915,12 @@ module.exports = {
                         let Member = null;
                         try {
                             Member = await interaction.guild.members.fetch(String(DisID)).then((member) => member);
-                        }catch (e){
+                        } catch (e) {
                             console.log("Returning due to unknown member");
                             console.log(e)
                         }
 
-                        if(Member === null){continue}
+                        if (Member === null) { continue }
 
                         const memberRoles = await Member.roles.cache;
 
@@ -905,9 +930,9 @@ module.exports = {
 
                                 if (payRole.id === role[0]) {
 
-                                    additionalPay =  (Number(Number(additionalPay) + Number(Number(totalTime) * Number(payRole.additionalPay))))
+                                    additionalPay = (Number(Number(additionalPay) + Number(Number(totalTime) * Number(payRole.additionalPay))))
                                     grandTotal = Number(Number(grandTotal) + Number(additionalPay))
-                                console.warn('User had additional Pay', additionalPay)
+                                    console.warn('User had additional Pay', additionalPay)
                                 }
                             }
                         }
@@ -932,14 +957,14 @@ module.exports = {
                             displayName: Member.displayName
                         }
                     }
-                }catch(e){
+                } catch (e) {
                     console.log(e)
                     return ErrorEmbed(interaction, e.message);
                 }
                 processEmebed.setDescription("<a:loading:1121922926313218120> Formatting & Attaching...")
                     .setColor("Orange")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
                 const FORMAT = interaction.options.getString('format')
 
@@ -947,7 +972,7 @@ module.exports = {
                 switch (FORMAT) {
                     case 'csv': {
                         let TimeStamp = new Date()
-                        TimeStamp = TimeStamp.toLocaleDateString('en-US', {timeZone: "UTC", hour12: false})
+                        TimeStamp = TimeStamp.toLocaleDateString('en-US', { timeZone: "UTC", hour12: false })
 
                         let ShiftsSummaries = [];
                         for (const userKey of Object.keys(Users)) {
@@ -958,14 +983,14 @@ module.exports = {
                         const CSV = await csvGenerator(['IDENT', 'displayName', 'totalTime', 'grandTotal',
                             'additionalPay'], ShiftsSummaries)
 
-                        const csvAttachment = new AttachmentBuilder(await Buffer.from(CSV), {name: `${EntityName}-${TimeStamp}-Shifts.csv`});
+                        const csvAttachment = new AttachmentBuilder(await Buffer.from(CSV), { name: `${EntityName}-${TimeStamp}-Shifts.csv` });
 
                         processEmebed
                             .setTitle(`${EntityName} Shift Summaries Export`)
                             .setDescription('All Shift Summaries For This Entity Have Been Exported To A CSV File, Attached.')
                             .setColor("Green")
 
-                        interaction.editReply({embeds: [processEmebed], files: [csvAttachment]})
+                        interaction.editReply({ embeds: [processEmebed], files: [csvAttachment] })
                     }
                         break
 
@@ -981,7 +1006,7 @@ module.exports = {
                             .setDescription(desc)
                             .setColor("Green")
 
-                        interaction.editReply({embeds: [processEmebed]})
+                        interaction.editReply({ embeds: [processEmebed] })
                     }
                 }
 
@@ -994,17 +1019,17 @@ module.exports = {
                     .setDescription("<a:loading:1121922926313218120> Fetching All Shifts Now & Roles With Additional Pay...")
                     .setColor("#a16060")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
                 //TODO Figure out a way to ensure the dates provided are handled as UTC Dates
                 const fromDate = new Date(interaction.options.getString('from'));
                 const toDate = new Date(interaction.options.getString('to'));
 
-                if(String(fromDate) === "Invalid Date" || String(toDate) === "Invalid Date"){
+                if (String(fromDate) === "Invalid Date" || String(toDate) === "Invalid Date") {
                     processEmebed.setColor('Red')
                         .setDescription("\\🔴 Unable to Execute Payroll. Invalid Date(s) provided.")
 
-                    return await interaction.editReply({embeds: [processEmebed]})
+                    return await interaction.editReply({ embeds: [processEmebed] })
                 }
 
                 const Shifts = await Entity.getPayrollPeriod(fromDate, toDate)//await Entity.getShifts();
@@ -1015,18 +1040,18 @@ module.exports = {
                 processEmebed.setDescription("<a:loading:1121922926313218120> Processing All Shifts Now...")
                     .setColor("#a18560")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
-                if(Shifts.length === 0 || !Shifts){
+                if (Shifts.length === 0 || !Shifts) {
                     processEmebed.setColor('Red')
                         .setDescription("\\🔴 Unable to Execute Payroll. There are no shifts logged.")
 
-                    return await interaction.editReply({embeds: [processEmebed]})
+                    return await interaction.editReply({ embeds: [processEmebed] })
                 }
 
                 let Users = {}
 
-                    console.warn('AdditionalPay', additionalPayRoles)
+                console.warn('AdditionalPay', additionalPayRoles)
                 for (const x of Shifts) {
 
                     //Figuring out the total of hours in a shift
@@ -1047,7 +1072,7 @@ module.exports = {
                     for (const role of memberRoles) {
                         for (const payRole of additionalPayRoles) {
                             if (payRole.id === role[0]) {
-                                additionalPay =  (Number(Number(additionalPay) + Number(Number(totalTime) * Number(payRole.additionalPay))))
+                                additionalPay = (Number(Number(additionalPay) + Number(Number(totalTime) * Number(payRole.additionalPay))))
                                 grandTotal = Number(Number(grandTotal) + Number(additionalPay))
                             }
                         }
@@ -1077,7 +1102,7 @@ module.exports = {
                 processEmebed.setDescription("<a:loading:1121922926313218120> Executing Payroll...")
                     .setColor("Orange")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
 
                 await Entity.executeShiftPayout(processEmebed, Users)
             }
@@ -1089,21 +1114,21 @@ module.exports = {
                     .setDescription("<a:loading:1121922926313218120> Removing selected shift...")
                     .setColor("#a16060")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
                 const selectedShift = interaction.options.getString('shift')
 
                 try {
                     await Entity.removeShift(selectedShift)
                     processEmebed.setDescription('\\✅ Successfully removed selected shift from user.')
                     processEmebed.setColor("Green")
-                    await interaction.editReply({embeds: [processEmebed]})
-                }catch(err){
+                    await interaction.editReply({ embeds: [processEmebed] })
+                } catch (err) {
                     console.log(err)
                     processEmebed.setDescription(`\\❌ ERROR: ${err.msg}`)
                     processEmebed.setColor("Red")
-                    return await interaction.editReply({embeds: [processEmebed]})
+                    return await interaction.editReply({ embeds: [processEmebed] })
                 }
-            }break
+            } break
 
             case 'clear-shifts': {
                 await interaction.deferReply()
@@ -1111,19 +1136,19 @@ module.exports = {
                     .setDescription("<a:loading:1121922926313218120> Clear All Shifts...")
                     .setColor("#a16060")
 
-                await interaction.editReply({embeds: [processEmebed]})
+                await interaction.editReply({ embeds: [processEmebed] })
                 const selectedShift = interaction.options.getString('shift')
 
                 try {
                     await Entity.clearShifts()
                     processEmebed.setDescription(`\\✅ Successfully Cleared All Shifts from \`\`${EntityName}\`\`.`)
                     processEmebed.setColor("Green")
-                    await interaction.editReply({embeds: [processEmebed]})
-                }catch(err){
+                    await interaction.editReply({ embeds: [processEmebed] })
+                } catch (err) {
                     console.log(err)
                     processEmebed.setDescription(`\\❌ ERROR: ${err.msg}`)
                     processEmebed.setColor("Red")
-                    return await interaction.editReply({embeds: [processEmebed]})
+                    return await interaction.editReply({ embeds: [processEmebed] })
                 }
             }
 

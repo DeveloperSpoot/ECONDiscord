@@ -61,7 +61,7 @@ const Entanglement = require("./dataCrusher/services/entanglement")
 const {ErrorEmbed} = require("./utils/embedUtil");
 const {serverJoin, serverLeave} = require("./dataCrusher/services/notify");
 const {request} = require("undici");
-require("dotenv").config(`.env`);
+require("dotenv").config();
 
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], partials: [Partials.Channel]});
 
