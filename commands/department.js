@@ -9,7 +9,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   AttachmentBuilder,
-  PermissionsBitField,
+  PermissionsBitField,MessageFlags
 } = require("discord.js");
 const { ErrorEmbed, SimpleEmbed } = require("../utils/embedUtil");
 const { activeDepartment } =

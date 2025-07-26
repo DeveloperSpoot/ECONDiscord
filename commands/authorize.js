@@ -1,4 +1,4 @@
-const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors} = require("discord.js");
+const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, MessageFlags} = require("discord.js");
 const {ErrorEmbed} = require("../utils/embedUtil");
 const {CreateData, PermManager, NotificationHQ} = require("../dataCrusher/Headquarters");
 const discord = require("discord.js");

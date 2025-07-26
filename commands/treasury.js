@@ -5,7 +5,7 @@ const {
     Interaction,
     SlashCommandBuilder,
     ComponentType, EmbedBuilder, AttachmentBuilder,
-    PermissionsBitField
+    PermissionsBitField, MessageFlags
 } = require("discord.js");
 const { SimpleEmbed, ErrorEmbed } = require("../utils/embedUtil");
 const discord = require("discord.js");

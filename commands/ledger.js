@@ -1,4 +1,4 @@
-const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, AttachmentBuilder} = require("discord.js");
+const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, AttachmentBuilder, MessageFlags} = require("discord.js");
 const {activeBusiness, activeDepartment} = require("../dataCrusher/Headquarters").CacheManager;
 const {RetrieveData} = require("../dataCrusher/Headquarters.js");
 const {ErrorEmbed} = require("../utils/embedUtil");

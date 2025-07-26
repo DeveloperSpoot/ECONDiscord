@@ -1,5 +1,5 @@
 const {RetrieveData, CreateData, UpdateData,GuildHQ,RevenueService} = require("../dataCrusher/Headquarters.js");
-const {Interaction, SlashCommandBuilder, EmbedBuilder, Colors} = require("discord.js");
+const {Interaction, SlashCommandBuilder, EmbedBuilder, Colors, MessageFlags} = require("discord.js");
 const {NotificationHQ, BusinessHQ} = require("../dataCrusher/Headquarters");
 
 module.exports = {
