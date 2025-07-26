@@ -89,7 +89,7 @@ module.exports = {
         if (!giverAccounts.wallet) {
             return interaction.reply({
                 content: "You do not have any accounts registered to the economy!",
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -109,7 +109,7 @@ module.exports = {
                         if (result === "Insufficient Funds") {
                             return interaction.reply({
                                 content: "You do not have enough money to give that amount!",
-                                ephemeral: true,
+                                flags: MessageFlags.Ephemeral,
                             });
                         }
                         const embed = new EmbedBuilder()
@@ -137,7 +137,7 @@ module.exports = {
                             interaction.options.getString("memo")
                         );
                         if(Transaction.amount >= 5000) { await NotificationHQ.flagNotification(interaction, Transaction);}
-                        await interaction.reply({embeds: [embed], ephemeral: true}).catch(e => console.log(e));
+                        await interaction.reply({embeds: [embed], flags: MessageFlags.Ephemeral}).catch(e => console.log(e));
                         await interaction.options
                             .getMember("user")
                             .send(

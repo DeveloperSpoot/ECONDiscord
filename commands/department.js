@@ -561,7 +561,7 @@ module.exports = {
               "Insufficient perms. Submit-Fines permission level required."
             );
           }
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           const Member = interaction.options.getUser("user");
           const amount = interaction.options.getNumber("amount");
@@ -741,7 +741,7 @@ module.exports = {
             );
           }
 
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           const Member = interaction.options.getUser("user");
           const citationID = interaction.options.getString("cad-record-id");

@@ -31,7 +31,7 @@ module.exports = {
         if(interaction.user.id !== '537355342313422849' && interaction.user.id !== interaction.guild.ownerId){
             return ErrorEmbed(interaction, 'You not authorized to use this command. Only the server owner is authorized.', true, false)
         }
-        await interaction.deferReply({ephemeral: true});
+        await interaction.deferReply({flags: MessageFlags.Ephemeral});
         const User = interaction.options.getUser('user');
 
         switch(interaction.options.getSubcommand()){

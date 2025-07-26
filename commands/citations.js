@@ -55,7 +55,7 @@ module.exports = {
         const guildManager = new GuildHQ(interaction);
         switch (interaction.options.getSubcommand()){
             case 'view': {
-                await interaction.deferReply({ephemeral: true});
+                await interaction.deferReply({flags: MessageFlags.Ephemeral});
                 const User = new UserHQ(interaction, interaction.user.id);
                 await User.getIDENT()
                 const userCitations = await User.getCitations();

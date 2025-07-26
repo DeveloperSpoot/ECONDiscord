@@ -33,8 +33,8 @@ module.exports = {
 
                 const attachBus = new AttachmentBuilder(Buffer.from(LedgerBus), {name: "Business-Ledger.csv"})
 
-                interaction.editReply("Attaching Business Ledger now.", { ephemeral: true })
-                interaction.followUp( {files: [attachBus], ephemeral: true })
+                interaction.editReply("Attaching Business Ledger now.", { flags: MessageFlags.Ephemeral })
+                interaction.followUp( {files: [attachBus], flags: MessageFlags.Ephemeral })
                 break;
             }
             case 'personal-ledger': {
@@ -56,8 +56,8 @@ module.exports = {
                 const attachBank = new AttachmentBuilder(Buffer.from(LedgerBank), {name: "Bank-Ledger.csv"})
                 const attachWallet = new AttachmentBuilder(Buffer.from(LedgerWallet), {name: "Wallet-Ledger.csv"})
 
-                interaction.editReply("Attaching both Wallet and Bank Ledgers now.", { ephemeral: true })
-                interaction.followUp( {files: [attachBank, attachWallet], ephemeral: true })
+                interaction.editReply("Attaching both Wallet and Bank Ledgers now.", { flags: MessageFlags.Ephemeral })
+                interaction.followUp( {files: [attachBank, attachWallet], flags: MessageFlags.Ephemeral })
                 break;
             }
             case 'department': {
@@ -72,8 +72,8 @@ module.exports = {
 
                 const attachDepartment = new AttachmentBuilder(Buffer.from(LedgerDep), {name: "Department-Ledger.csv"})
 
-                interaction.editReply("Attaching department ledger now..", { ephemeral: true })
-                interaction.followUp( {files: [attachDepartment], ephemeral: true })
+                interaction.editReply("Attaching department ledger now..", { flags: MessageFlags.Ephemeral })
+                interaction.followUp( {files: [attachDepartment], flags: MessageFlags.Ephemeral })
                 break;
             }
             case 'treasury': {
@@ -89,8 +89,8 @@ module.exports = {
 
                 const attachTreasury = new AttachmentBuilder(Buffer.from(LedgerDep), {name: "Treasury-Ledger.csv"})
 
-                interaction.editReply("Attaching Treasury ledger now..", { ephemeral: true })
-                interaction.followUp( {files: [attachTreasury], ephemeral: true })
+                interaction.editReply("Attaching Treasury ledger now..", { flags: MessageFlags.Ephemeral })
+                interaction.followUp( {files: [attachTreasury], flags: MessageFlags.Ephemeral })
                 break;
             }
             case 'user': {
@@ -123,8 +123,8 @@ module.exports = {
                 const attachWallet = new AttachmentBuilder(Buffer.from(LedgerWallet), {name: "Wallet-Ledger.csv"})
 
 
-                interaction.editReply("Attaching both Wallet and Bank Ledgers now.", { ephemeral: true })
-                interaction.followUp( {files: [attachBank, attachWallet], ephemeral: true })
+                interaction.editReply("Attaching both Wallet and Bank Ledgers now.", { flags: MessageFlags.Ephemeral })
+                interaction.followUp( {files: [attachBank, attachWallet], flags: MessageFlags.Ephemeral })
                 break;
             }
         }

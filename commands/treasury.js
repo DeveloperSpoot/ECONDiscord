@@ -519,7 +519,7 @@ module.exports = {
         switch (interaction.options.getSubcommand()) {
             case 'add': {
 
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 let ETG = new EntanglementDrive(interaction);
 
                 let ETG_Embed = new EmbedBuilder()
@@ -1305,7 +1305,7 @@ module.exports = {
             case 'set-stipend': {
                 const Stipend = interaction.options.getNumber('stipend');
                 const Timeout = interaction.options.getNumber('timeout')
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 await UpdateData.treasuryStipend(interaction.IDENT, Stipend, Timeout).catch(async err => {
                     console.error(err);
                     await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)
@@ -1323,7 +1323,7 @@ module.exports = {
 
             case 'set-budget-timeout': {
                 const Timeout = interaction.options.getNumber('dep-timeout')
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 await UpdateData.treasuryBudgetTimeout(interaction.IDENT, Timeout).catch(async err => {
                     console.error(err);
                     await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)

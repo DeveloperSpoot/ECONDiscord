@@ -1,4 +1,4 @@
-const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors} = require("discord.js");
+const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, MessageFlags} = require("discord.js");
 //const RetrieveData = require("../dataCrusher/services/retrieve").retrieve
 const {RetrieveData, CreateData} = require("../dataCrusher/Headquarters.js");
 const {UserHQ, UpdateData} = require("../dataCrusher/Headquarters");
@@ -40,7 +40,7 @@ module.exports = {
                 });
                 const User = await new UserHQ(interaction, interaction.user.id);
                 await User.claimStartingBalance();
-               await interaction.reply({embeds: [embed], ephemeral: true});
+               await interaction.reply({embeds: [embed], flags: MessageFlags.Ephemeral});
             return;
         } //If accounts exist already, the user is told they already have them along with their IDs
         const User = await new UserHQ(interaction, interaction.user.id);
@@ -68,6 +68,6 @@ module.exports = {
                 text: interaction.guild.name + " Economy System",
                 iconURL: interaction.guild.iconURL(),
             });
-        await interaction.reply({embeds: [embed], ephemeral: true});
+        await interaction.reply({embeds: [embed], flags: MessageFlags.Ephemeral});
     },
 };
