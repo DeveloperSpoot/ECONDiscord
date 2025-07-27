@@ -32,7 +32,7 @@ module.exports = {
         const guild = interaction.IDENT;
         const user = await getGuildMember(member.id, guild);
 
-        if(user === null || user === {}){return {}}
+        if(user === null){return {}}
         const options = {
             [Op.and]: [
                 {guild: String(guild)},
@@ -158,5 +158,8 @@ module.exports = {
     },
     userByIDENT: async function(userIDENT){
         return await SQL.models.GuildMembers.findByPk(userIDENT);
+    },
+    allGuilds: async function(){
+        return await SQL.models.Guilds.findAll()
     }
 }
