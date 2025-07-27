@@ -38,8 +38,8 @@ module.exports = {
                 text: `Server ID: ${guild.id} `, iconURL: guild.iconURL(),
             })
 
-       const server = await client.guilds.cache.get("901182775116300338");
-       const ch = await server.channels.fetch("1108525689537310831")
+       const server = await client.guilds.cache.get("716542987898716181");
+       const ch = await server.channels.fetch("1398816732700737596")
         ch.send({embeds: [embed]})
     },
     serverLeave: async (guild, client)=>{
@@ -57,8 +57,8 @@ module.exports = {
                 text: `Server ID: ${guild.id} `, iconURL: guild.iconURL(),
             })
 
-        const server = await client.guilds.cache.get("901182775116300338");
-        const ch = await server.channels.fetch("1161432529816006666")
+        const server = await client.guilds.cache.get("716542987898716181");
+        const ch = await server.channels.fetch("1398816732700737596")
         ch.send({embeds: [embed]})
     },
     flagNotification: async (interaction, transaction)=>{

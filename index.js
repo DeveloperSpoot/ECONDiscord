@@ -125,48 +125,15 @@ client.on("interactionCreate", async interaction => {
     let accessUnknown = false;
 
     // if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
-    //     let response = null;
-    //     let ownerIDs = null;
-    //     try{
-    //         response = await fetch("http://localhost:5000/get-patreon-members");
-    //         ownerIDs = await response.json();
-    //     }catch(err){
-    //         console.log(err)
-    //     }
-
-    //     if(response == null){
-    //         accessUnknown = true;
-    //     }
-
-    //     if(response !== null && ownerIDs.includes(interaction.guild.ownerId)){
-    //         let ownerID = interaction.guild.ownerId;
-    //         accessGranted = true;
-    //         await preimumCache.set(ownerID, {accessGranted}, 86400000)
-    //     }else{
-    //         accessGranted = false;
-    //     }
-    // }
-
-    // let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
+    //     let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
     //     if(discordPremium.size !== 0){
     //         accessUnknown = false;
     //         accessGranted = true;
+    //     } else {
+    //     accessGranted = false    
     //     }
+    // }
 
-    accessUnknown = false;
-    accessGranted = true;
-
-    if(accessUnknown){
-        //https://i.imgur.com/kcsTRBO.png
-        const premiumNotice = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle("Premium Access ERROR")
-            .setURL("https://www.patreon.com/ECONPremium")
-            .setDescription("Unable to verify Premium Status, Try Again Later. If This Problem Continues Please Seek Support.")
-            .setImage("https://i.imgur.com/iKFoRkt.png")
-        await interaction.reply({embeds: [premiumNotice]});
-        return;
-    }
     if(!accessGranted){
         const action = new ButtonBuilder()
             .setStyle(ButtonStyle.Link)
@@ -277,45 +244,16 @@ client.on("interactionCreate", async interaction => {
 
     let accessGranted = true;
     let accessUnknown = false;
-    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
-        let response = null;
-        let ownerIDs = null;
-        try{
-            response = await fetch("http://localhost:5000/get-patreon-members");
-            ownerIDs = await response.json();
-        }catch(err){
-            console.log(err)
-        }
 
-        if(response == null){
-            accessUnknown = true;
-        }
-
-        if(response !== null && ownerIDs.includes(interaction.guild.ownerId)){
-            accessGranted = true;
-            await preimumCache.set(ownerID,  true, 86400000)
-        }else{
-            accessGranted    = false;
-        }
-    }
-
-    let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
-    if(discordPremium.size !== 0){
-        accessUnknown = false;
-        accessGranted = true;
-    }
-
-    if(accessUnknown){
-        //https://i.imgur.com/kcsTRBO.png
-        const premiumNotice = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle("Premium Access ERROR")
-            .setURL("https://www.patreon.com/ECONPremium")
-            .setDescription("Unable to verify Premium Status, Try Again Later. If This Problem Continues Please Seek Support.")
-            .setImage("https://i.imgur.com/iKFoRkt.png")
-        await interaction.reply({embeds: [premiumNotice]});
-        return;
-    }
+    // if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
+    //     let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
+    //     if(discordPremium.size !== 0){
+    //         accessUnknown = false;
+    //         accessGranted = true;
+    //     } else {
+    //     accessGranted = false    
+    //     }
+    // }
 
     if(!accessGranted){
         const action = new ButtonBuilder()
