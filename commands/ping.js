@@ -1,4 +1,4 @@
-const {SlashCommandBuilder, EntitlementManager, ButtonBuilder, ButtonStyle, ActionRowBuilder} = require('discord.js');
+const {SlashCommandBuilder, EntitlementManager, ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, PermissionFlagsBits} = require('discord.js');
 const {EntanglementDrive} = require("../dataCrusher/Headquarters");
 
 module.exports = {

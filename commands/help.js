@@ -23,12 +23,12 @@ module.exports = {
                 { name: 'Business', value: '/bus', inline: true },
                 { name: 'Department', value: '/dep', inline: true },
                 { name: 'Support Us', value: '[Discord Premium](https://discord.com/application-directory/1077139728538812416/store/1260839276069785653)', inline: true },
-                { name: 'Bot Guide', value: '[View all bot commands here.](https://spectacledev.com/EconDocs)', inline: true },
-                {name: 'Support Server', value: '[Join The Discord Server](https://discord.gg/8BdC9VfguF)', inline: true},
+                { name: 'Bot Guide', value: '[View all bot commands here.](https://discord.gg/tgg2cyYHDh)', inline: true },
+                {name: 'Support Server', value: '[Join The Discord Server](https://discord.gg/tgg2cyYHDh)', inline: true},
                 {name: 'Legal', value: '[Terms of Service](https://spectacledev.com/econ-termsofservice) | [Privacy Policy](https://spectacledev.com/econ-privacypolicy)', inline: true},
                 {name: 'Vote For The Bot', value: '[Vote on Top.gg](https://top.gg/bot/1077139728538812416)', inline: true},
                 {name: 'Invite The Bot', value: '[Invite Link](https://discord.com/api/oauth2/authorize?client_id=1077139728538812416&permissions=414464723008&scope=bot)', inline: true},
-                {name: 'Forms', value: '[Report A Bug](https://forms.gle/UhUfJuHU1MdQja347) | [Make A Suggestion](https://forms.gle/ruda4CAhMP1TxrBZ6)', inline: true}
+                {name: 'Forms', value: '[Report A Bug](https://discord.gg/tgg2cyYHDh) | [Make A Suggestion](https://discord.gg/tgg2cyYHDh)', inline: true}
 
             )
 
