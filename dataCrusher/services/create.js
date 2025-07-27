@@ -15,15 +15,19 @@ async function getGuildMember(disID, guildID) {
 }
 
 async function LogGeneral(interaction, color, title, description, ...fields){
-    if(interaction.guildID !== interaction.IDENT){return;}
-    
+    if(interaction.guildId !== interaction.IDENT){return;}
+
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
 
     let GuildChannel =  (await SQL.models.Guilds.findByPk(interaction.IDENT, {raw: true}));
 
+
+
     if(GuildChannel.generalLogChannel != null && GuildChannel.generalLogChannel){
         GuildChannel =  await interaction.guild.channels.fetch(GuildChannel.generalLogChannel);
+
         await GuildChannel.send({embeds: [ColorEmbed]})
+
     }
 
 }

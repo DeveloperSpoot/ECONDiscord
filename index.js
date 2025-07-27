@@ -124,15 +124,15 @@ client.on("interactionCreate", async interaction => {
     let accessGranted = true;
     let accessUnknown = false;
 
-    // if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
-    //     let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
-    //     if(discordPremium.size !== 0){
-    //         accessUnknown = false;
-    //         accessGranted = true;
-    //     } else {
-    //     accessGranted = false    
-    //     }
-    // }
+    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
+        let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
+        if(discordPremium.size !== 0){
+            accessUnknown = false;
+            accessGranted = true;
+        } else {
+        accessGranted = false    
+        }
+    }
 
     if(!accessGranted){
         const action = new ButtonBuilder()
@@ -245,15 +245,15 @@ client.on("interactionCreate", async interaction => {
     let accessGranted = true;
     let accessUnknown = false;
 
-    // if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
-    //     let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
-    //     if(discordPremium.size !== 0){
-    //         accessUnknown = false;
-    //         accessGranted = true;
-    //     } else {
-    //     accessGranted = false    
-    //     }
-    // }
+    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
+        let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
+        if(discordPremium.size !== 0){
+            accessUnknown = false;
+            accessGranted = true;
+        } else {
+        accessGranted = false    
+        }
+    }
 
     if(!accessGranted){
         const action = new ButtonBuilder()

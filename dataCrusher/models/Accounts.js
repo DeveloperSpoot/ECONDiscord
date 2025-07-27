@@ -39,7 +39,7 @@ const Accounts = DB.define("Accounts", {
     name: {
         type: DataTypes.TEXT,
         allowNull: true,
-        unique: true
+        unique: false
     },
     message : {
         type: DataTypes.TEXT,

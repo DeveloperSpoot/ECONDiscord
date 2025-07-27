@@ -22,7 +22,7 @@ function Department(interaction, IDENT) {
 }
 
 async function LogGeneral(interaction, color, title, description, ...fields){
-    if(interaction.guildID !== interaction.IDENT){return;}
+    if(interaction.guildId !== interaction.IDENT){return;}
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
 
     let GuildChannel =  (await SQL.models.Guilds.findByPk(String(interaction.IDENT), {raw: true}));
@@ -51,7 +51,7 @@ async function LogGeneral(interaction, color, title, description, ...fields){
 }
 
 async function LogActivity(interaction, color, title, description, ...fields){
-    if(interaction.guildID !== interaction.IDENT){return;}
+    if(interaction.guildId !== interaction.IDENT){return;}
 
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
 
