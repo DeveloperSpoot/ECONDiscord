@@ -87,6 +87,7 @@ for (const file of commandFiles) {
     ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax"
  */
 let preimumCMDS = ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax", "inflate", "deflate"];
+let serverbypass = ["1376731956867239946", "1398809381801562293"]
    // preimumCMDS = [];
 client.on("interactionCreate", async interaction => {
     if (interaction.isAutocomplete()) return;
@@ -124,7 +125,7 @@ client.on("interactionCreate", async interaction => {
     let accessGranted = true;
     let accessUnknown = false;
 
-    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
+    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand()) && !serverbypass.includes(interaction.guildId)){
         let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
         if(discordPremium.size !== 0){
             accessUnknown = false;
@@ -245,7 +246,7 @@ client.on("interactionCreate", async interaction => {
     let accessGranted = true;
     let accessUnknown = false;
 
-    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand())){
+    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand()) && !serverbypass.includes(interaction.guildId)){
         let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
         if(discordPremium.size !== 0){
             accessUnknown = false;
