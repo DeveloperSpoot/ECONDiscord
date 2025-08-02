@@ -87,7 +87,7 @@ for (const file of commandFiles) {
     ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax"
  */
 let preimumCMDS = ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax", "inflate", "deflate"];
-let serverbypass = (process.env.serverbypass).split(", ") // Bypasses premium checks. Format: "serverid, serverid"
+let serverbypass = (process.env.server_bypass).split(", ") // Bypasses premium checks. Format: "serverid, serverid"
 
 client.on("interactionCreate", async interaction => {
     if (interaction.isAutocomplete()) return;
