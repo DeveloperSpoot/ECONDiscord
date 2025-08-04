@@ -350,4 +350,15 @@ for (const file of eventFiles) {
     }
 }
 
+//Updates the stats of ECON on top.gg
+// Comment this section out if hosting.
+const { AutoPoster } = require('topgg-autoposter')
+
+const ap = AutoPoster(process.env.topgg, client)
+
+ap.on('posted', () => {
+  console.log('Posted stats to Top.gg!')
+})
+
+//Logs into the bot and runs it.
 client.login(process.env.token);

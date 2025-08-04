@@ -23,7 +23,7 @@ module.exports = {
                 { name: 'Business', value: '/bus', inline: true },
                 { name: 'Department', value: '/dep', inline: true },
                 { name: 'Support Us', value: '[Discord Premium](https://discord.com/application-directory/1077139728538812416/store/1260839276069785653)', inline: true },
-                { name: 'Bot Guide', value: '[View all bot commands here.](https://econ.spectacledev.com/docs)', inline: true },
+                { name: 'Bot Guide', value: '[View all bot commands here.](https://econ.spectacledev.com/Documentation)', inline: true },
                 {name: 'Support Server', value: '[Join The Discord Server](https://discord.gg/tgg2cyYHDh)', inline: true},
                 {name: 'Legal', value: '[Terms of Service](https://spectacledev.com/econ-termsofservice) | [Privacy Policy](https://spectacledev.com/econ-privacypolicy)', inline: true},
                 {name: 'Vote For The Bot', value: '[Vote on Top.gg](https://top.gg/bot/1077139728538812416)', inline: true},
