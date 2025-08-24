@@ -6,12 +6,16 @@ const {AttachmentBuilder} = require("discord.js");
 const {colorEmbed} = require("../../customPackage/colorBar");
 const IRS = require("./irs");
 const GuildHQ = require("./guild");
+const crypto = require("crypto")
 
 async function getGuildMember(disID, guildID) {
+        const hashUser = crypto.createHash("sha256")
+        .update(disID)
+        .digest("hex");
     const options = {
         [Op.and]: [
             {guild: String(guildID)},
-            {id: String(disID)}]
+            {sid: String(hashUser)}]
     }
 
     return await SQL.models.GuildMembers.findOne({where: options, raw: true})
@@ -28,7 +32,7 @@ async function LogGeneral(interaction, color, title, description, ...fields){
 
      let GuildChannel =  (await SQL.models.Guilds.findByPk(String(interaction.IDENT), {raw: true}));
 
-    if(GuildChannel.generalLogChannel != null && GuildChannel.generalLogChannel){
+    if(typeof GuildChannel.generalLogChannel != null && GuildChannel.generalLogChannel){
         try{
             GuildChannel =  await interaction.guild.channels.fetch(GuildChannel.generalLogChannel);
         }catch(err){
@@ -37,10 +41,10 @@ async function LogGeneral(interaction, color, title, description, ...fields){
         await GuildChannel.send({embeds: [ColorEmbed]})
     }
 
-     let Channel = (await SQL.models.Accounts.findByPk(String(interaction.IDENT), {raw: true}));
+     let Channel = (await SQL.models.Accounts.findByPk(String(this.IDENT), {raw: true}));
 
 
-    if(Channel.generalLogChannel != null && Channel.generalLogChannel){
+    if(typeof Channel.generalLogChannel != null && Channel.generalLogChannel){
         try{
             Channel =  await interaction.guild.channels.fetch(Channel.generalLogChannel);
         }catch(err){
