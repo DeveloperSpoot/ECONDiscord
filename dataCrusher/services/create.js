@@ -3,16 +3,12 @@ const {Op} = require("sequelize");
 const SQL = require("../Server");
 const {intersects} = require("sequelize/lib/utils");
 const {colorEmbed} = require("../../customPackage/colorBar");
-const crypto = require("crypto")
 
 async function getGuildMember(disID, guildID) {
-        const hashUser = crypto.createHash("sha256")
-        .update(disID)
-        .digest("hex");
     const options = {
         [Op.and]: [
             {guild: String(guildID)},
-            {sid: String(hashUser)}]
+            {id: String(disID)}]
     }
 
     return await SQL.models.GuildMembers.findOne({ where: options, raw: true})
@@ -40,14 +36,9 @@ module.exports = {
     user: async (interaction)=>{
         const user = interaction.user.id;
         const guild = interaction.IDENT;
-        const hashUser = crypto.createHash("sha256")
-        .update(user)
-        .digest("hex");
-
        return await SQL.models.GuildMembers.create({
             guild: `${guild}`,
-            id:0,
-            sid: hashUser,
+            id: user,
             netWorth: 0
         }).catch((err) => {
             return ErrorEmbed(interaction, err.message, false, true);

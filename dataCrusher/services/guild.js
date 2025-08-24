@@ -5,16 +5,12 @@ const {treasuryStartingBalance} = require("./update");
 const {activeDepartment, activeBusiness, preimumCache, currencyCache, irsCache} = require("./cache");
 const fetch = require("node-fetch");
 const {colorEmbed} = require("../../customPackage/colorBar");
-const crypto = require("crypto")
 
 async function getGuildMember(disID, guildID) {
-        const hashUser = crypto.createHash("sha256")
-        .update(disID)
-        .digest("hex");
     const options = {
         [Op.and]: [
             {guild: String(guildID)},
-            {sid: String(hashUser)}]
+            {id: String(disID)}]
     }
 
     return await SQL.models.GuildMembers.findOne({where: options, raw: true})

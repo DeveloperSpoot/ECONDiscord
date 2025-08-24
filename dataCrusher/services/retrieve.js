@@ -2,17 +2,13 @@ const SQL = require("../Server")
 const {Op} = require("sequelize")
 const {ErrorEmbed}= require("../../utils/embedUtil");
 const {leaderboards} = require("./cache");
-const crypto = require("crypto")
 
 async function getGuildMember(disID, guildID) {
-        const hashUser = crypto.createHash("sha256")
-        .update(disID)
-        .digest("hex");
     const options = {
         [Op.and]: [
             {guild: String(guildID)},
-            {sid: String(hashUser)}]
-    }
+            {id: String(disID)}]
+        }
 
     return await SQL.models.GuildMembers.findOne({ where: options, raw: true})
 }
@@ -122,14 +118,10 @@ module.exports = {
         return await SQL.models.Accounts.findAll(options)
     },
     user: async (interaction, userId) => {
-        const hashUser = crypto.createHash("sha256")
-        .update(userId)
-        .digest("hex");
-
         const options = {
             [Op.and]: [
                 {guild: String(interaction.IDENT)},
-                {sid: (typeof hashUser === "string")?hashUser:String(hashUser)}]
+                {id: (typeof userId === "string")?userId:String(userId)}]
         }
 
         return await SQL.models.GuildMembers.findOne({ where: options, raw: true})
@@ -153,7 +145,7 @@ module.exports = {
             const netWorth = (Number(account.balance)+Number(pairdAccount.balance))
             const user = await SQL.models.GuildMembers.findByPk(account.owner);
             if(user.presence === 'INACTIVE'){continue}
-            netWorths.push({id: user.sid, netWorth: netWorth})
+            netWorths.push({id: user.id, netWorth: netWorth})
         }
         const sortedNet =  netWorths.sort(sortByNumber);
         sortedNet.map(async (user, index)=>{

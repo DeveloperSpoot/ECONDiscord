@@ -23,10 +23,6 @@ module.exports = DB.define("GuildMembers", {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    sid: { // Sudo-Identifier (Hashed Discord ID)
-        type: DataTypes.STRING,
-        allowNull: true
-    },
     stipendTimestamp: {
         type: DataTypes.DATE,
         allowNull: true

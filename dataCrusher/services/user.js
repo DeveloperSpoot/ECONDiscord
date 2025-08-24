@@ -3,16 +3,12 @@ const { ErrorEmbed } = require("../../utils/embedUtil");
 const SQL = require("../Server");
 const {treasuryStartingBalance} = require("./update");
 const {activeDepartment, activeBusiness} = require("./cache");
-const crypto = require("crypto")
 
 async function getGuildMember(disID, guildID) {
-        const hashUser = crypto.createHash("sha256")
-        .update(disID)
-        .digest("hex");
     const options = {
         [Op.and]: [
             {guild: String(guildID)},
-            {sid: String(hashUser)}]
+            {id: String(disID)}]
     }
 
     return await SQL.models.GuildMembers.findOne({where: options, raw: true})
