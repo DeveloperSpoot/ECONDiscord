@@ -18,6 +18,7 @@ async function getGuildMember(disID, guildID) {
 
 function Department(interaction, IDENT) {
     this.interaction = interaction;
+    this.interaction.DepartmentIDENT = IDENT;
     this.IDENT = IDENT;
 }
 
@@ -37,7 +38,7 @@ async function LogGeneral(interaction, color, title, description, ...fields){
         await GuildChannel.send({embeds: [ColorEmbed]})
     }
 
-    let Channel = (await SQL.models.Department.findByPk(String(this.IDENT), {raw: true}));
+    let Channel = (await SQL.models.Department.findByPk(String(interaction.DepartmentIDENT), {raw: true}));
 
     if(Channel.generalLogChannel != null && Channel.generalLogChannel){
         try{
@@ -70,7 +71,7 @@ async function LogActivity(interaction, color, title, description, ...fields){
         await GuildChannel.send({embeds: [ColorEmbed]})
     }
 
-    let Channel = (await SQL.models.Department.findByPk(String(this.IDENT), {raw: true}));
+    let Channel = (await SQL.models.Department.findByPk(String(interaction.DepartmentIDENT), {raw: true}));
 
     if(Channel.activityLogChannel != null && Channel.activityLogChannel){
         try{
