@@ -52,6 +52,12 @@ module.exports = {
           subcommand
             .setName("remove-employee")
             .setDescription("Remove an employee from your business.")
+            .addUserOption((option)=> 
+            option
+                .setName("employee")
+                .setDescription("The employee you would like to terminate.")
+                .setRequired(true)
+            )
         )
     )
 
@@ -112,57 +118,58 @@ module.exports = {
                 .setDescription("The item you want to delete.")
                 .setRequired(true)
                 .setAutocomplete(true)
+              )
+            )
+            //  Edit Item
+
+        .addSubcommand((subCmd) =>
+          subCmd
+            .setName("edit-item")
+            .setDescription("Edit an item.")
+            .addStringOption((option) =>
+              option
+                .setName("item")
+                .setRequired(true)
+                .setDescription("The item you wish to edit.")
+                .setAutocomplete(true)
+            )
+            .addStringOption((option) =>
+              option
+                .setName("name")
+                .setDescription("The name of the item.")
+                .setRequired(false)
+            )
+            .addStringOption((option) =>
+              option
+                .setName("description")
+                .setDescription("The description of the item. Be creative!")
+                .setRequired(false)
+            )
+            .addNumberOption((option) =>
+              option
+                .setName("price")
+                .setDescription("The price of the item. Can include cents.")
+                .setRequired(false)
+            )
+            .addBooleanOption((option) =>
+              option
+                .setName("own-multiple")
+                .setDescription(
+                  "If true, the item can be added to the customer's inventory multiple times."
+                )
+                .setRequired(false)
+            )
+            .addBooleanOption((option) =>
+              option
+                .setName("quick-access")
+                .setDescription(
+                  "Should the item be accessible through quick access, allowing sellers to sell multiple items at once."
+                )
+                .setRequired(false)
             )
         )
     )
 
-    //  Edit Item
-    .addSubcommand((subCmd) =>
-      subCmd
-        .setName("edit-item")
-        .setDescription("Edit an item.")
-        .addStringOption((option) =>
-          option
-            .setName("item")
-            .setRequired(true)
-            .setDescription("The item you wish to edit.")
-            .setAutocomplete(true)
-        )
-        .addStringOption((option) =>
-          option
-            .setName("name")
-            .setDescription("The name of the item.")
-            .setRequired(false)
-        )
-        .addStringOption((option) =>
-          option
-            .setName("description")
-            .setDescription("The description of the item. Be creative!")
-            .setRequired(false)
-        )
-        .addNumberOption((option) =>
-          option
-            .setName("price")
-            .setDescription("The price of the item. Can include cents.")
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("own-multiple")
-            .setDescription(
-              "If true, the item can be added to the customer's inventory multiple times."
-            )
-            .setRequired(false)
-        )
-        .addBooleanOption((option) =>
-          option
-            .setName("quick-access")
-            .setDescription(
-              "Should the item be accessible through quick access, allowing sellers to sell multiple items at once."
-            )
-            .setRequired(false)
-        )
-    )
 
     //  Pay Commands
     .addSubcommandGroup((group) =>
@@ -1690,99 +1697,41 @@ module.exports = {
               "Insufficient perms. Manager permission level required."
             );
           }
+
           await interaction.deferReply();
-          const menu = new StringSelectMenuBuilder()
-            .setCustomId("employeeDeletion")
-            .setPlaceholder("Please choose an employee to delete.");
+          const selectedMember = interaction.options.getUser("employee")
 
-          const employees = await business.getEmployees();
-          const options = [];
-          for (let key in employees) {
-            const data = employees[key];
-
-            const user = await business.getEmployeeUser(employees[key].id);
-
-            //TODO Handle members that randomly leave the server, remove business perms.
-            let member;
-            try {
-              member = await interaction.guild.members.fetch(user.id);
-            } catch (e) {
-              if (e.message === "Unknown Member") {
-                continue;
-              }
-
-              console.log("ERROR", e);
-              continue;
-            }
-            options.push({
-              label: member.displayName,
-              description: data.level,
-              value: key,
-            });
+          const employee = await business.getEmployeeByDiscord(selectedMember.id, interaction.guild.id)
+          if(employee == null){
+             return await ErrorEmbed(
+              interaction,
+              `Selected member (<@${selectedMember.id}>) is not an employee.`
+            );
           }
-          if (options.length === 0) {
-            return interaction.reply("No employees exist in this business!");
+
+          if ((await PermManager.Business.compareUsers(business,interaction, selectedMember)) === false) {
+            return ErrorEmbed(
+              interaction,
+              "The user you are attemping to terminate has higher privileges than you."
+            );
           }
-          menu.addOptions(options);
-          const row = new ActionRowBuilder().addComponents(menu);
-          await interaction.editReply({
-            content: "Please choose the employee you would like to terminate.",
-            components: [row],
+
+          const embed = await SimpleEmbed(
+            interaction,
+            "Successfully deleted employee",
+             `${selectedMember.displayName} has been deleted!`,
+             "Green",
+             null);
+
+          await business.terminateEmployee(
+            employee.IDENT,
+            selectedMember
+          );
+          interaction.editReply({
+            embeds: [embed],
+            components: [],
           });
-
-          const filter = (i) => {
-            return i.user.id === interaction.user.id;
-          };
-          await interaction.channel
-            .awaitMessageComponent({
-              filter,
-              componentType: ComponentType.SelectMenu,
-              time: 60000,
-            })
-            .then(async (selection) => {
-              const user = await business.getEmployeeUser(
-                employees[selection.values[0]].id
-              );
-              const member = await interaction.guild.members.fetch(user.id);
-              if (selection.customId === "employeeDeletion") {
-                if (
-                  (await PermManager.Business.compareUsers(
-                    business,
-                    interaction,
-                    member
-                  )) === false
-                ) {
-                  return ErrorEmbed(
-                    interaction,
-                    "The user you are attemping to terminate has higher privileges than you."
-                  );
-                }
-
-                const embed = await SimpleEmbed(
-                  interaction,
-                  "Successfully deleted employee",
-                  `${member.displayName} has been deleted!`,
-                  "Green",
-                  null
-                );
-                await business.terminateEmployee(
-                  employees[selection.values[0]].IDENT,
-                  member
-                );
-                interaction.editReply({
-                  embeds: [embed],
-                  components: [],
-                });
-              }
-            })
-            .catch((e) => {
-              console.error(e);
-              interaction.editReply({
-                content:
-                  "You did not select an option within the alotted amount of time.",
-                components: [],
-              });
-            });
+              
         }
         break;
       case "pay-member":

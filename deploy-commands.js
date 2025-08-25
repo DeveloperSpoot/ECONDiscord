@@ -11,16 +11,25 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    commands.push(command.data);
+    commands.push(command.data.toJSON());
 }
 
-const rest = new REST({version: '10'}).setToken(process.env.token);
+const rest = new REST().setToken(process.env.token);
 
-rest.put(
-    Routes.applicationCommands(process.env.clientId),
-    { body: commands },
-).then(() => console.log('Successfully registered application commands GLOBAL.'))
-.catch(console.error);
+(async ()=>{
+    try{
+        console.log(`Refreshing ${commands.length} application commands.`)
+        const data = await rest.put(
+            Routes.applicationCommands(process.env.clientid),
+            {body: commands}
+        );
+
+        console.log(`Loaded ${data.length} application commands`)
+    }catch(err){
+        console.error(err)
+    }
+})();
+
 
 // rest.put(Routes.applicationGuildCommands(process.env.clientId, '975399648070099007'), {body: commands})
 //     .then(() => console.log('Successfully registered application commands.'))
