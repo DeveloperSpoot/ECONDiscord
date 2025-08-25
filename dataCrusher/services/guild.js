@@ -17,6 +17,7 @@ async function getGuildMember(disID, guildID) {
 }
 
 async function LogGeneral(interaction, color, title, description, ...fields){
+    try{
     if(interaction.guildId !== interaction.IDENT){return;}
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
 
@@ -30,7 +31,9 @@ async function LogGeneral(interaction, color, title, description, ...fields){
         }
         await GuildChannel.send({embeds: [ColorEmbed]})
     }
-
+    }catch(err){
+        console.log(err)
+    }
 }
 
 function Guild(interaction) {

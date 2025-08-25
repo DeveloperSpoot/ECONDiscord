@@ -22,6 +22,7 @@ function Department(interaction, IDENT) {
 }
 
 async function LogGeneral(interaction, color, title, description, ...fields){
+    try{
     if(interaction.guildId !== interaction.IDENT){return;}
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
 
@@ -47,10 +48,13 @@ async function LogGeneral(interaction, color, title, description, ...fields){
 
         await Channel.send({embeds: [ColorEmbed]})
     }
-
+    }catch(err){
+        console.log(err)
+    }
 }
 
 async function LogActivity(interaction, color, title, description, ...fields){
+    try{
     if(interaction.guildId !== interaction.IDENT){return;}
 
     const [ColorEmbed] = await colorEmbed(interaction, color, title, description, ...fields)
@@ -76,6 +80,9 @@ async function LogActivity(interaction, color, title, description, ...fields){
         }
         await Channel.send({embeds: [ColorEmbed]})
     }
+}catch(err){
+    console.log(err)
+}
 }
 
 const MoneyFormat = new Intl.NumberFormat('en-us', {currency: 'USD', style: 'currency'})
