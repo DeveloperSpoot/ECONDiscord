@@ -12,8 +12,11 @@ const SQL = require("./dataCrusher/Server");
      * INFO: If sync ever fails, ensure to drop (delete) any enums in the database (through intellij, under object types).
      **************************************************************************************************************/
     try {
-        // await SQL.sync({ force: true });
-        // await SQL.models.Accounts.sync();
+        /* Uncomment ths when running ECON for the first time. This set's up the database. Comment it out after running for the first time. */
+         //await SQL.sync({ force: true });
+        /**/
+        
+         // await SQL.models.Accounts.sync();
      //   await SQL.models.Inventory.sync({alter: true})
      //    await SQL.models.Department.sync()
      //    await SQL.models.DepartmentRoles.sync()
@@ -33,17 +36,6 @@ const SQL = require("./dataCrusher/Server");
         console.log("Unable to sync database:", err)
     }
 
-    // try {
-    //    const b = await Guilds.create({
-    //         IDENT: "901182775116300338",
-    //         balance: 0.00,
-    //         loggingChannel: null
-    //     })
-    //
-    //      console.log("Data successfully created.", b.get())
-    // }catch(err){
-    //     console.log(err)
-    // }
 })()
 
 require('./deploy-commands.js')
@@ -350,15 +342,15 @@ for (const file of eventFiles) {
     }
 }
 
-//Updates the stats of ECON on top.gg
-// Comment this section out if hosting.
-const { AutoPoster } = require('topgg-autoposter')
+// //Updates the stats of ECON on top.gg
+// // Comment this section out if hosting.
+// const { AutoPoster } = require('topgg-autoposter')
 
-const ap = AutoPoster(process.env.topgg, client)
+// const ap = AutoPoster(process.env.topgg, client)
 
-ap.on('posted', () => {
-  console.log('Posted stats to Top.gg!')
-})
+// ap.on('posted', () => {
+//   console.log('Posted stats to Top.gg!')
+// })
 
 //Logs into the bot and runs it.
 client.login(process.env.token);

@@ -12,6 +12,7 @@
     "node-html-to-image": "^3.2.4",
     "pg": "^8.8.0",
     "sequelize": "^6.37.3",
+    "sqlite3": "^6.0.1",
     "topgg-autoposter": "^2.0.2",
     "undici": "^5.22.1"
   },
