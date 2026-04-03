@@ -85,8 +85,12 @@ Entanglement.prototype = {
     },
     getEntanglement:async function(){
         try{
-         
+
             let guild = await SQL.models.Guilds.findByPk(this.IDENT, {raw: true});
+
+            if(!guild){
+                return false;
+            }
 
             if(guild.entanglement){
 

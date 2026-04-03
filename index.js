@@ -16,22 +16,22 @@ const SQL = require("./dataCrusher/Server");
          //await SQL.sync({ force: true });
         /**/
         
-         // await SQL.models.Accounts.sync();
-     //   await SQL.models.Inventory.sync({alter: true})
-     //    await SQL.models.Department.sync()
-     //    await SQL.models.DepartmentRoles.sync()
-     //       await SQL.models.DepartmentMembers.sync()
-     //    await SQL.models.Citation.sync()
-     //     await SQL.models.Fee.sync()
-         //await SQL.models.Guilds.sync({alter: true})
-        // await SQL.models.Guilds.sync(.sync({alter: true})
+        // await SQL.models.Accounts.sync();
+        // await SQL.models.Inventory.sync({alter: true})
+        // await SQL.models.Department.sync()
+        // await SQL.models.DepartmentRoles.sync()
+        // await SQL.models.DepartmentMembers.sync()
+        // await SQL.models.Citation.sync()
+        // await SQL.models.Fee.sync()
+        // await SQL.models.Guilds.sync({alter: true})
+        // await SQL.models.Guilds.sync({alter: true})
         // await SQL.models.GuildMembersc({alter:true})
-     //    await SQL.sync({force: true})
-     //    await SQL.models.AdvTransactionLogs.sync({force: true})
-     //    await SQL.models.Shift.sync({alter: true})
-     //   await SQL.models.RolePay.sync({alter: true})
-       //  await SQL.models.Accounts.sync({alter: true})
-       //  console.log("Database has been synced successfully.")
+        // await SQL.sync({force: true})
+        // await SQL.models.AdvTransactionLogs.sync({force: true})
+        // await SQL.models.Shift.sync({alter: true})
+        // await SQL.models.RolePay.sync({alter: true})
+        // await SQL.models.Accounts.sync({alter: true})
+        //console.log("Database has been synced successfully.")
     }catch(err){
         console.log("Unable to sync database:", err)
     }

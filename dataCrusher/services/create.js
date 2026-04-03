@@ -35,9 +35,15 @@ async function LogGeneral(interaction, color, title, description, ...fields){
 module.exports = {
     user: async (interaction)=>{
         const user = interaction.user.id;
-        const guild = interaction.IDENT;
+        const guild = String(interaction.IDENT);
+
+        await SQL.models.Guilds.findOrCreate({
+            where: {IDENT: guild},
+            defaults: {IDENT: guild, balance: 0.00}
+        });
+
        return await SQL.models.GuildMembers.create({
-            guild: `${guild}`,
+            guild: guild,
             id: user,
             netWorth: 0
         }).catch((err) => {
