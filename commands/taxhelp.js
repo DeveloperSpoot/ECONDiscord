@@ -24,9 +24,10 @@ module.exports = {
                 },
                 {
                     name: "💵  Income Tax",
-                    value: "Progressive bracket tax on members' **wallet** (liquid cash) balances.\n" +
-                        "**Apply:** `/tax type:Income brackets:<brackets> [target-role:@role] [preview:true]`\n" +
-                        "Omit `target-role` to sweep all registered members.",
+                    value: "Progressive bracket tax applied automatically when members use `/collect-income`.\n" +
+                        "**Set brackets:** `/tax type:Income brackets:<brackets>`\n" +
+                        "Brackets are stored server-wide and applied to every salary payout until changed.\n" +
+                        "If no brackets are set, no income tax is deducted on collection.",
                     inline: false
                 },
                 {
@@ -49,7 +50,7 @@ module.exports = {
                     inline: false
                 }
             )
-            .setFooter({ text: "Use preview:true on any /tax command to see the breakdown before collecting." });
+            .setFooter({ text: "Use preview:true with PEX and VAT to see the breakdown before collecting." });
 
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
