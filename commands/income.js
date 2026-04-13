@@ -68,6 +68,7 @@ module.exports = {
         const revenueService = new IRS(interaction);
         const now = new Date();
         const nowMs = now.getTime();
+        const memberRoles = interaction.member.roles.cache;
         const results = [];
         let totalNet = 0;
         let totalGross = 0;
