@@ -1,10 +1,8 @@
 const {ErrorEmbed} = require("../../utils/embedUtil");
 const {Op} = require("sequelize");
 const SQL = require("../Server");
-const Notify = require("./notify");
 const {AttachmentBuilder} = require("discord.js");
 const {colorEmbed} = require("../../customPackage/colorBar");
-const IRS = require("./irs");
 const GuildHQ = require("./guild");
 
 async function getGuildMember(disID, guildID) {
@@ -117,98 +115,6 @@ Business.prototype = {
         return await SQL.models.Accounts.update({activityLogChannel: channel.id}, {where: {IDENT: this.IDENT}})
 
     },
-    clearShifts: async function(){
-        try{
-            const dataResult = await SQL.models.Shift.destroy({where: {entityIDENT: this.IDENT}})
-            const busName = await this.getName();
-            await LogActivity(this.interaction, "Orange", "Shifts Cleared", `All logged shifts for ${busName} have been cleared by <@${this.interaction.user.id}>.`)
-            return dataResult
-        }catch(e){
-            console.warn(e);
-            return ErrorEmbed(this.interaction, e.message)
-        }
-
-    },
-    removeShift: async function(selectedShift){
-        try{
-            const dataResult = await SQL.models.Shift.destroy({where: {IDENT: selectedShift}});
-            const busName = await this.getName();
-            await LogActivity(this.interaction, "Orange", "Shift Removed", `A shift logged has been removed from ${busName} by <@${this.interaction.user.id}>.`)
-            return dataResult
-        }catch(e){
-            console.warn(e);
-            return ErrorEmbed(this.interaction, e.message)
-        }
-    },
-    executeShiftPayout: async function(processEmbed, ShiftSummaries){
-        const busBalance = await this.getBalance();
-        const exeMsg = "<a:loading:1121922926313218120> Executing Payroll... \n";
-        let desc = ""
-        let fullyProcessed = true;
-
-        for(const userKey of Object.keys(ShiftSummaries)){
-            const curUser = ShiftSummaries[userKey]
-            const UsersHQ = ShiftSummaries[userKey].userHQ;
-            const amount = curUser.grandTotal
-            const usersAccounts = await UsersHQ.getBasicAccounts();
-            const account = usersAccounts.bank
-
-            if(0 > (Number(busBalance)-Number(curUser.grandTotal))){
-                desc = desc + `\\🔴 Unable To Process Payroll For ${curUser.displayName}. Insufficient Funds. \n`
-                fullyProcessed = false;
-
-                processEmbed.setDescription(exeMsg+desc)
-                await this.interaction.editReply({embeds: [processEmbed]})
-                continue
-            }
-
-            const revenueService = new IRS(this.interaction);
-            const amountAT = await revenueService.calculatePayrollTax(amount);
-
-            await SQL.models.Accounts.update({balance: (Number(busBalance)-Number(amountAT.total))}, {where: {IDENT: this.IDENT}});
-            await SQL.models.Accounts.update({balance: (Number(account.balance)+Number(amountAT.total))}, {where: {IDENT: account.IDENT}});
-
-            await revenueService.filePayrollTax(amountAT.tax, this, 'Account');
-
-            let reason = "PAYROLL Through ECON Shifts. Total Hours:"+curUser.totalTime+"."
-
-            const Transaction =  await SQL.models.AdvTransactionLogs.create({
-                guild: this.interaction.IDENT,
-                amount: amountAT.total,
-                creditAccount: this.IDENT,
-                debitAccount: account.IDENT,
-                creditType: "Account",
-                debitType: "Account",
-                memo: reason
-            }).catch(err=>console.log(err))
-
-            // if (amount >= 5000){
-            //     await Notify.flagNotification(this.interaction, Transaction)
-            // }
-
-            desc = desc + `\\🟢 Processed Payroll For ${curUser.displayName}. \n`
-            processEmbed.setDescription(exeMsg+desc)
-            await this.interaction.editReply({embeds: [processEmbed]})
-        }
-
-        if(fullyProcessed === false){
-            processEmbed.setDescription("There was an error with one or more payroll executions.\n"+desc)
-                .setTitle('Unable To Fully Process Payroll Through ECON Shifts.')
-                .setColor("Red")
-            await this.interaction.editReply({embeds: [processEmbed]})
-            await LogActivity(this.interaction, 'Green', 'Shift Payroll Distributed', desc)
-
-            return
-        }
-
-        processEmbed.setDescription(desc)
-            .setTitle('Successfully Processed Payroll Through ECON Shifts.')
-            .setColor("Green")
-        await this.interaction.editReply({embeds: [processEmbed]})
-
-        await LogActivity(this.interaction, 'Green', 'Shift Payroll Distributed', desc)
-
-    },
     payDepartment: async function(department, amount){
         const depName = await department.getName();
         const balance = await department.getBalance();
@@ -316,33 +222,6 @@ Business.prototype = {
             const busName = await this.getName();
             const guildManager = new GuildHQ(this.interaction);
             await LogGeneral(this.interaction, "Green", "Base Pay Updated", `The Base Pay for **${busName}** has been updated to ${await guildManager.formatMoney(amount)}. Updated by <@${this.interaction.user.id}>`)
-
-            return dataResult
-        }catch(e){
-            console.warn(e);
-            return ErrorEmbed(this.interaction, e.message)
-        }
-    },
-    recordShift: async function(activeShift, USER){
-        const startTime = new Date(activeShift.start);
-        const endTime = new Date(activeShift.end);
-
-        const totalHours = Number(((endTime - startTime) / (1000 * 60 * 60))).toFixed(2);
-
-        try{
-            const dataResult = await SQL.models.Shift.create({
-                GuildIDENT: this.interaction.IDENT,
-                start: startTime,
-                end: endTime,
-                entityIDENT: activeShift.entityIDENT,
-                entityType: activeShift.type,
-                user: USER.IDENT,
-            })
-
-            const busName = await this.getName();
-            await LogActivity(this.interaction, "Green", "Shift Logged", `A new shift has been logged to **${busName}**.`,
-                {name: 'Logged By', value: `<@${this.interaction.user.id}> (${this.interaction.member.displayName})`, inline: true},
-                {name: 'Hours logged', value: totalHours, inline: true})
 
             return dataResult
         }catch(e){
@@ -586,23 +465,6 @@ Business.prototype = {
             console.warn(e)
             return ErrorEmbed(this.interaction, e.message)
         }
-    },
-    getPayrollPeriod: async function(fromDate, toDate){
-        return await SQL.models.Shift.findAll({
-            where: {
-                [Op.and]: [
-                    {entityIDENT: this.IDENT},
-                    {
-                        start: {
-                            [Op.between]: [fromDate, toDate]
-                        }
-                    }
-                ],
-            }, raw: true
-        })
-    },
-    getShifts: async function(){
-        return await SQL.models.Shift.findAll({where: {entityIDENT: this.IDENT}, raw: true})
     },
     getSpecItem: async function(itemIDENT){
 

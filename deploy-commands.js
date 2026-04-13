@@ -23,7 +23,7 @@ const rest = new REST().setToken(process.env.token);
             Routes.applicationCommands(process.env.clientid),
             {body: commands}
         );
-
+        
         console.log(`Loaded ${data.length} application commands`)
     }catch(err){
         console.error(err)

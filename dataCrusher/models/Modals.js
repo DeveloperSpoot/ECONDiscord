@@ -15,8 +15,9 @@ const DepartmentRoles = require("./DepartmentRoles");
 const AdvTransactionLogs = require("./AdvTransactionLogs.js");
 const Citation = require("./Citation");
 const Fee = require("./Fee")
-const Shift = require("./Shift")
 const RolePay = require("./RolePay")
+const Salary = require("./Salary")
+const SalaryReceipt = require("./SalaryReceipt")
 
 module.exports = {
     DiscordUsers: DiscordUsers,
@@ -36,6 +37,7 @@ module.exports = {
     DepartmentRoles: DepartmentRoles,
     Citation: Citation,
     Fee: Fee,
-    Shift: Shift,
-    RolePay: RolePay
+    RolePay: RolePay,
+    Salary: Salary,
+    SalaryReceipt: SalaryReceipt
 }

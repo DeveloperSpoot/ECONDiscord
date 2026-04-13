@@ -13,7 +13,7 @@ const SQL = require("./dataCrusher/Server");
      **************************************************************************************************************/
     try {
         /* Uncomment ths when running ECON for the first time. This set's up the database. Comment it out after running for the first time. */
-        await SQL.sync({ force: true });
+        //await SQL.sync({ force: true });
         /**/
         
         // await SQL.models.Accounts.sync();
@@ -28,7 +28,6 @@ const SQL = require("./dataCrusher/Server");
         // await SQL.models.GuildMembersc({alter:true})
         // await SQL.sync({force: true})
         // await SQL.models.AdvTransactionLogs.sync({force: true})
-        // await SQL.models.Shift.sync({alter: true})
         // await SQL.models.RolePay.sync({alter: true})
         // await SQL.models.Accounts.sync({alter: true})
         //console.log("Database has been synced successfully.")

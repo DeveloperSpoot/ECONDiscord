@@ -104,14 +104,6 @@ User.prototype = {
         let mathStuff = Number(itemRe.quantity)-Number(amount)
         return SQL.models.Inventory.update({quantity: mathStuff}, {where: {IDENT: itemIDENT}})
     },
-    getShifts: async function(sortBy){
-        const USER =  await SQL.models.GuildMembers.findByPk(this.IDENT, {raw: false});
-        if(typeof sortBy !== "undefined"){
-            return await USER.getShifts({where: {entityIDENT: sortBy.IDENT}, raw: true})
-        }
-
-        return await USER.getShifts({raw: true});
-    },
     getBusiness: async function(){
         let Bus = await activeBusiness.get(`${this.interaction.IDENT}-${this.interaction.user.id}`);
 

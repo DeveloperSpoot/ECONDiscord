@@ -45,7 +45,6 @@ module.exports = {
             await SQL.models.Citation.destroy({where: {guild: guild}, force: true}) //GUILD
             await SQL.models.Fee.destroy({where: {guild: guild}, force: true}) //GUILD
             await SQL.models.MoneyPrints.destroy({where: {guild: guild}, force: true}) //GUILD
-            await SQL.models.Shift.destroy({where: {GuildIDENT: guild}, force: true})
             await SQL.models.RolePay.destroy({where: {GuildIDENT: guild}, force: true})
             await SQL.models.DepartmentMembers.destroy({where: {GuildIDENT: guild}, force: true})
             await SQL.models.DepartmentRoles.destroy({where: {GuildIDENT: guild}, force: true})

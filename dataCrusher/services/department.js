@@ -1,7 +1,6 @@
 const {ErrorEmbed} = require("../../utils/embedUtil");
 const {Op, DataTypes} = require("sequelize");
 const SQL = require("../Server");
-const Notify = require("./notify")
 const {colorEmbed} = require("../../customPackage/colorBar");
 const IRS = require("./irs");
 const Guild = require("./guild");
@@ -97,92 +96,6 @@ Department.prototype = {
         return await SQL.models.Department.update({activityLogChannel: channel.id}, {where: {IDENT: this.IDENT}})
 
     },
-    clearShifts: async function(){
-        try{
-            const depName = await this.getName();
-            await LogActivity(this.interaction, "Orange", "Shifts Cleared", `All logged shifts for ${depName} have been cleared by <@${this.interaction.user.id}>.`)
-            return await SQL.models.Shift.destroy({where: {entityIDENT: this.IDENT}})
-        }catch(err){
-            console.log(err)
-        }
-    },
-    removeShift: async function(selectedShift){
-        try {
-            const depName = await this.getName();
-            await LogActivity(this.interaction, "Orange", "Shift Removed", `A shift logged has been removed from ${depName} by <@${this.interaction.user.id}>.`)
-            return await SQL.models.Shift.destroy({where: {IDENT: selectedShift}});
-        }catch(err){
-            console.log(err)
-        }
-    },
-    executeShiftPayout: async function(processEmbed, ShiftSummaries){
-        const depBalance = await this.getBalance();
-        const exeMsg = "<a:loading:1121922926313218120> Executing Payroll... \n";
-        let desc = ""
-        let fullyProcessed = true;
-
-        for(const userKey of Object.keys(ShiftSummaries)){
-            const curUser = ShiftSummaries[userKey]
-            const UsersHQ = ShiftSummaries[userKey].userHQ;
-            const amount = curUser.grandTotal
-            const usersAccounts = await UsersHQ.getBasicAccounts();
-            const account = usersAccounts.bank
-
-            const revenueService = new IRS(this.interaction);
-            const amountAT = await revenueService.calculatePayrollTax(amount);
-
-            if(0 > (Number(depBalance)-Number(curUser.grandTotal))){
-                desc = desc + `\\🔴 Unable To Process Payroll For ${curUser.displayName}. Insufficient Funds. \n`
-                fullyProcessed = false;
-
-                processEmbed.setDescription(exeMsg+desc)
-                await this.interaction.editReply({embeds: [processEmbed]})
-                continue
-            }
-
-            await SQL.models.Department.update({balance: (Number(depBalance)-Number(amountAT.total))}, {where: {IDENT: this.IDENT}});
-            await SQL.models.Accounts.update({balance: (Number(account.balance)+Number(amountAT.total))}, {where: {IDENT: account.IDENT}});
-
-            await revenueService.filePayrollTax(amountAT.tax, this, 'Department');
-
-            let reason = "PAYROLL Through ECON Shifts. Total Hours:"+curUser.totalTime+"."
-
-            const Transaction =  await SQL.models.AdvTransactionLogs.create({
-                guild: this.interaction.IDENT,
-                amount: amountAT.total,
-                creditAccount: this.IDENT,
-                debitAccount: account.IDENT,
-                creditType: "Department",
-                debitType: "Account",
-                memo: reason
-            }).catch(err=>console.log(err))
-
-            if (amount >= 5000){
-                await Notify.flagNotification(this.interaction, Transaction)
-            }
-            desc = desc + `\\🟢 Processed Payroll For ${curUser.displayName}. \n`
-
-            processEmbed.setDescription(exeMsg+desc)
-            await this.interaction.editReply({embeds: [processEmbed]})
-        }
-
-        if(fullyProcessed === false){
-            processEmbed.setDescription("There was an error with one or more payroll executions.\n"+desc)
-                .setTitle('Unable To Fully Process Payroll Through ECON Shifts.')
-                .setColor("Red")
-            await this.interaction.editReply({embeds: [processEmbed]})
-            await LogActivity(this.interaction, 'Orange', 'Shift Payroll Partially Distributed', desc)
-
-            return
-        }
-
-        processEmbed.setDescription(desc)
-            .setTitle('Successfully Processed Payroll Through ECON Shifts.')
-            .setColor("Green")
-        await this.interaction.editReply({embeds: [processEmbed]})
-        await LogActivity(this.interaction, 'Green', 'Shift Payroll Distributed', desc)
-
-    },
     getBasePay: async function(){
         const dep = await SQL.models.Department.findByPk(this.IDENT, {raw: true})
 
@@ -257,50 +170,6 @@ Department.prototype = {
         }catch(err){
             console.log(err)
         }
-    },
-    recordShift: async function(activeShift, USER){
-        const startTime = new Date(activeShift.start);
-        const endTime = new Date(activeShift.end);
-
-        const totalHours = Number(((endTime - startTime) / (1000 * 60 * 60))).toFixed(2);
-
-        try{
-            const dataResult = await SQL.models.Shift.create({
-                GuildIDENT: this.interaction.IDENT,
-                start: startTime,
-                end: endTime,
-                entityIDENT: activeShift.entityIDENT,
-                entityType: activeShift.type,
-                user: USER.IDENT,
-            })
-
-            const depName = await this.getName();
-            await LogActivity(this.interaction, "Green", "Shift Logged", `A new shift has been logged to **${depName}**.`,
-                {name: 'Logged By', value: `<@${this.interaction.user.id}> (${this.interaction.member.displayName})`, inline: true},
-                {name: 'Hours logged', value: totalHours, inline: true})
-
-            return dataResult
-        }catch(e){
-            console.warn(e);
-            return ErrorEmbed(this.interaction, e.message)
-        }
-    },
-    getPayrollPeriod: async function(fromDate, toDate){
-        return await SQL.models.Shift.findAll({
-            where: {
-                [Op.and]: [
-                    {entityIDENT: this.IDENT},
-                    {
-                        start: {
-                            [Op.between]: [fromDate, toDate]
-                        }
-                    }
-                ],
-            }, raw: true
-        })
-    },
-    getShifts: async function(){
-        return await SQL.models.Shift.findAll({where: {entityIDENT: this.IDENT}, raw: true})
     },
     getMemberRole: async function(){
         const Department = await SQL.models.Department.findByPk(this.IDENT, {raw: true})
