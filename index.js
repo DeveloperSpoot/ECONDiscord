@@ -23,7 +23,7 @@ const SQL = require("./dataCrusher/Server");
         // await SQL.models.DepartmentMembers.sync()
         // await SQL.models.Citation.sync()
         // await SQL.models.Fee.sync()
-        // await SQL.models.Guilds.sync({alter: true})
+        await SQL.models.Guilds.sync({alter: true}) // ADD incomeTaxBrackets column — comment out after first restart
         // await SQL.models.Guilds.sync({alter: true})
         // await SQL.models.GuildMembersc({alter:true})
         // await SQL.sync({force: true})

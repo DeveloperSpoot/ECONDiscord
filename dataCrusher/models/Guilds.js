@@ -66,6 +66,11 @@ module.exports = DB.define("Guilds", {
         allowNull: true,
         defaultValue: null
     },
+    incomeTaxBrackets: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null
+    },
     entanglement:{
         type: DataTypes.TEXT,
         allowNull: true

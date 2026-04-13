@@ -1,68 +1,22 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require("discord.js");
 const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
-const { GuildHQ, RetrieveData } = require("../dataCrusher/Headquarters");
-
-function parseBrackets(str) {
-    const parts = str.split(',').map(s => s.trim()).filter(Boolean);
-    if (parts.length === 0) {
-        return { error: 'Brackets string is empty. Example: `50000:10,100000:20,30`' };
-    }
-    const brackets = [];
-    let prev = 0;
-    for (const part of parts) {
-        if (part.includes(':')) {
-            const [threshStr, rateStr] = part.split(':');
-            const thresh = Number(threshStr);
-            const rate = Number(rateStr);
-            if (isNaN(thresh) || isNaN(rate)) {
-                return { error: `Invalid bracket \`${part}\`. Expected \`threshold:rate\` (e.g. \`50000:10\`).` };
-            }
-            if (thresh <= prev) {
-                return { error: `Thresholds must be in ascending order. Got \`${thresh}\` after \`${prev}\`.` };
-            }
-            if (rate < 0 || rate > 100) {
-                return { error: `Rate \`${rate}\` is out of range. Must be between 0 and 100.` };
-            }
-            brackets.push({ from: prev, to: thresh, rate });
-            prev = thresh;
-        } else {
-            const rate = Number(part);
-            if (isNaN(rate)) {
-                return { error: `Invalid top rate \`${part}\`. Expected a plain number (e.g. \`30\`).` };
-            }
-            if (rate < 0 || rate > 100) {
-                return { error: `Rate \`${rate}\` is out of range. Must be between 0 and 100.` };
-            }
-            brackets.push({ from: prev, to: Infinity, rate });
-        }
-    }
-    return { brackets };
-}
-
-function calcTax(balance, brackets) {
-    let tax = 0;
-    for (const b of brackets) {
-        if (balance <= b.from) break;
-        const slice = Math.min(balance, b.to) - b.from;
-        tax += slice * (b.rate / 100);
-    }
-    return Math.round(tax * 100) / 100;
-}
+const { GuildHQ } = require("../dataCrusher/Headquarters");
+const { parseBrackets, calcTax } = require("../utils/taxBrackets");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("tax")
-        .setDescription("Apply a progressive tax sweep to guild members or businesses.")
+        .setDescription("Set income tax brackets, or apply a PEX/VAT sweep.")
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addStringOption(opt =>
             opt.setName("type")
-                .setDescription("Which balance to tax.")
+                .setDescription("Tax type.")
                 .setRequired(true)
                 .addChoices(
-                    { name: "Income (wallet)", value: "income" },
-                    { name: "PEX (bank balance)", value: "pex" },
-                    { name: "VAT (business accounts)", value: "vat" }
+                    { name: "Income (sets brackets for /collect-income)", value: "income" },
+                    { name: "PEX (bank balance sweep)", value: "pex" },
+                    { name: "VAT (business accounts sweep)", value: "vat" }
                 ))
         .addStringOption(opt =>
             opt.setName("brackets")
@@ -70,11 +24,11 @@ module.exports = {
                 .setRequired(true))
         .addRoleOption(opt =>
             opt.setName("target-role")
-                .setDescription("Apply to members of a specific role only. Income/PEX only. Omit for all.")
+                .setDescription("PEX only: apply to members of a specific role. Omit for all members.")
                 .setRequired(false))
         .addBooleanOption(opt =>
             opt.setName("preview")
-                .setDescription("Preview calculations without deducting anything.")
+                .setDescription("PEX/VAT only: preview calculations without deducting anything.")
                 .setRequired(false)),
 
     async execute(interaction) {
@@ -86,20 +40,44 @@ module.exports = {
 
         const taxType = interaction.options.getString("type");
         const bracketsStr = interaction.options.getString("brackets");
-        const targetRole = interaction.options.getRole("target-role");
-        const previewOnly = interaction.options.getBoolean("preview") ?? false;
 
         const { brackets, error } = parseBrackets(bracketsStr);
         if (error) {
             return ErrorEmbed(interaction, error, false, false);
         }
 
-        const taxLabel = taxType === "income" ? "Income Tax" : taxType === "pex" ? "PEX" : "VAT";
         const guildManager = new GuildHQ(interaction);
+
+        // ── Income: store brackets for /collect-income to use ─────────────────
+        if (taxType === "income") {
+            await SQL.models.Guilds.update(
+                { incomeTaxBrackets: bracketsStr },
+                { where: { IDENT: interaction.IDENT } }
+            );
+
+            const bracketSummary = brackets.map(b => {
+                const from = b.from === 0 ? "0" : b.from.toLocaleString();
+                const to = b.to === Infinity ? "∞" : b.to.toLocaleString();
+                return `${from}–${to}: ${b.rate}%`;
+            }).join("\n");
+
+            const embed = new EmbedBuilder()
+                .setTitle("Income Tax Brackets Set")
+                .setColor("Green")
+                .setDescription("These brackets will be applied automatically when members use `/collect-income`.")
+                .addFields({ name: "Brackets", value: bracketSummary })
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [embed] });
+        }
+
+        // ── VAT: sweep all business accounts ──────────────────────────────────
+        const targetRole = interaction.options.getRole("target-role");
+        const previewOnly = interaction.options.getBoolean("preview") ?? false;
+        const taxLabel = taxType === "pex" ? "PEX" : "VAT";
         const results = [];
         let totalCollected = 0;
 
-        // ── VAT: sweep all business accounts ──────────────────────────────────
         if (taxType === "vat") {
             const businessAccounts = await SQL.models.Accounts.findAll({
                 where: { guild: interaction.IDENT, type: "business" },
@@ -141,11 +119,8 @@ module.exports = {
                 totalCollected += actualTax;
             }
 
-        // ── Income / PEX: sweep member wallet or bank ──────────────────────────
+        // ── PEX: sweep member bank balances ───────────────────────────────────
         } else {
-            const accountType = taxType === "income" ? "personal-wallet" : "personal-bank";
-
-            // Resolve members — role-filtered or all
             let members = await SQL.models.GuildMembers.findAll({
                 where: { guild: interaction.IDENT },
                 raw: true
@@ -166,7 +141,7 @@ module.exports = {
 
             for (const member of members) {
                 const account = await SQL.models.Accounts.findOne({
-                    where: { owner: member.IDENT, type: accountType },
+                    where: { owner: member.IDENT, type: "personal-bank" },
                     raw: true
                 });
 
@@ -191,7 +166,7 @@ module.exports = {
                         debitAccount: interaction.guildId,
                         creditType: "Account",
                         debitType: "Treasury",
-                        memo: `${taxLabel} | User ${member.id}`
+                        memo: `PEX | User ${member.id}`
                     }).catch(console.error);
                 }
 
@@ -210,11 +185,7 @@ module.exports = {
 
         if (results.length === 0) {
             return interaction.editReply({
-                embeds: [
-                    new EmbedBuilder()
-                        .setColor("Yellow")
-                        .setDescription(`No taxable balances found under these brackets.`)
-                ]
+                embeds: [new EmbedBuilder().setColor("Yellow").setDescription("No taxable balances found under these brackets.")]
             });
         }
 

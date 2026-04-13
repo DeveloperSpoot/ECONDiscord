@@ -3,6 +3,7 @@ const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { UserHQ, RetrieveData, DepartmentHQ, BusinessHQ, GuildHQ, SalaryHQ } = require("../dataCrusher/Headquarters");
 const IRS = require("../dataCrusher/services/irs");
+const { parseBrackets, calcTax } = require("../utils/taxBrackets");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -66,6 +67,10 @@ module.exports = {
             return await ErrorEmbed(interaction, "Unable to load your bank account balance. Please try again later.", false, false);
         }
         const revenueService = new IRS(interaction);
+        const guildRecord = await SQL.models.Guilds.findByPk(interaction.IDENT, { raw: true });
+        const incomeBrackets = guildRecord?.incomeTaxBrackets
+            ? parseBrackets(guildRecord.incomeTaxBrackets).brackets ?? null
+            : null;
         const now = new Date();
         const nowMs = now.getTime();
         const memberRoles = interaction.member.roles.cache;
@@ -92,7 +97,7 @@ module.exports = {
 
             if (isRoleEntry) {
                 receipt = await SalaryHQ.getReceipt(salary.IDENT, guildMemberRecord.IDENT);
-                lastPaid = receipt.lastPaidAt ? new Date(receipt.lastPaidAt).getTime() : null;
+                lastPaid = receipt?.lastPaidAt ? new Date(receipt.lastPaidAt).getTime() : null;
             }
 
             let cyclesDue = !lastPaid ? 1 : Math.floor((nowMs - lastPaid) / periodMs);
@@ -140,9 +145,12 @@ module.exports = {
                     : await SQL.models.Department.findByPk(salary.entityIDENT, { raw: true });
             const available = Number(sourceRecord?.balance ?? 0);
 
-            const amountAfterTax = await revenueService.calculatePayrollTax(gross);
-            const netAmount = Number(amountAfterTax.total);
-            const taxAmount = Number(amountAfterTax.tax);
+            let taxAmount = 0;
+            let netAmount = gross;
+            if (incomeBrackets) {
+                taxAmount = calcTax(gross, incomeBrackets);
+                netAmount = gross - taxAmount;
+            }
             summary.net = netAmount;
             summary.tax = taxAmount;
 
