@@ -13,34 +13,35 @@ const SQL = require("./dataCrusher/Server");
      **************************************************************************************************************/
     try {
         /* Uncomment ths when running ECON for the first time. This set's up the database. Comment it out after running for the first time. */
-         //await SQL.sync({ force: true });
+        await SQL.sync({ force: true });
         /**/
         
-        // await SQL.models.Accounts.sync();
-        // await SQL.models.Inventory.sync({alter: true})
-        // await SQL.models.Department.sync()
-        // await SQL.models.DepartmentRoles.sync()
-        // await SQL.models.DepartmentMembers.sync()
-        // await SQL.models.Citation.sync()
-        // await SQL.models.Fee.sync()
-        // await SQL.models.Guilds.sync({alter: true})
-        // await SQL.models.Guilds.sync({alter: true})
-        // await SQL.models.GuildMembersc({alter:true})
-        // await SQL.sync({force: true})
-        // await SQL.models.AdvTransactionLogs.sync({force: true})
-        // await SQL.models.Shift.sync({alter: true})
-        // await SQL.models.RolePay.sync({alter: true})
-        // await SQL.models.Accounts.sync({alter: true})
+        await SQL.models.Accounts.sync();
+        await SQL.models.Inventory.sync({alter: true})
+        await SQL.models.Department.sync()
+        await SQL.models.DepartmentRoles.sync()
+        await SQL.models.DepartmentMembers.sync()
+        await SQL.models.Citation.sync()
+        await SQL.models.Fee.sync()
+        await SQL.models.Guilds.sync({alter: true})
+        await SQL.models.Guilds.sync({alter: true})
+        await SQL.models.GuildMembersc({alter:true})
+        await SQL.sync({force: true})
+        await SQL.models.AdvTransactionLogs.sync({force: true})
+        await SQL.models.Shift.sync({alter: true})
+        await SQL.models.RolePay.sync({alter: true})
+        await SQL.models.Accounts.sync({alter: true})
         //console.log("Database has been synced successfully.")
-    }catch(err){
-        console.log("Unable to sync database:", err)
-    }
+	}catch(err){
+	    console.log("Unable to sync database:", err)
+	}
 
-    try {
-        await SQL.models.AdvTransactionLogs.sync();
-    } catch (err) {
-        console.log("Unable to ensure AdvTransactionLogs table exists:", err);
-    }
+	try {
+	    await SQL.sync();
+	    console.log("Database schema synchronized.");
+	} catch (err) {
+	    console.log("Unable to synchronize schema:", err);
+	}
 
 })()
 
