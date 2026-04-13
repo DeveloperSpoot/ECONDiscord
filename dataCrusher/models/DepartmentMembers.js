@@ -1,6 +1,44 @@
 const { DataTypes} = require("sequelize");
 const DB = require("../Server.js");
 
+const PERMISSIONS = ['Department-Head', 'Member', 'Department-Management', 'Payroll-Management', 'Shift-Management', 'Finance-Management', 'Citation-Management', 'Vehicle-Management', 'Inventory-Management', 'Submit-ShiftLogs', 'Submit-Citations', 'Submit-Incidents'];
+const isSQLite = DB.getDialect && DB.getDialect() === "sqlite";
+
+function buildPermissionsField(allowNull) {
+    if (isSQLite) {
+        return {
+            type: DataTypes.TEXT,
+            allowNull,
+            defaultValue: allowNull ? null : JSON.stringify([]),
+            get() {
+                const raw = this.getDataValue("permissions");
+                if (!raw) {
+                    return [];
+                }
+                try {
+                    return JSON.parse(raw);
+                } catch (err) {
+                    console.error("Failed to parse department member permissions", err);
+                    return [];
+                }
+            },
+            set(value) {
+                if (value == null) {
+                    this.setDataValue("permissions", allowNull ? null : JSON.stringify([]));
+                    return;
+                }
+                const next = Array.isArray(value) ? value : [];
+                this.setDataValue("permissions", JSON.stringify(next));
+            }
+        };
+    }
+
+    return {
+        type: DataTypes.ARRAY(DataTypes.ENUM(...PERMISSIONS)),
+        allowNull
+    };
+}
+
 const DepartmentMembers = DB.define("DepartmentMembers", {
     IDENT: {
         primaryKey: true,
@@ -8,10 +46,7 @@ const DepartmentMembers = DB.define("DepartmentMembers", {
         allowNull: false,
         defaultValue: DataTypes.UUIDV4
     },
-    permissions: {
-        type: DataTypes.ARRAY(DataTypes.ENUM('Department-Head', 'Member', 'Department-Management', 'Payroll-Management', 'Shift-Management', 'Finance-Management', 'Citation-Management','Vehicle-Management', 'Inventory-Management', 'Submit-ShiftLogs', 'Submit-Citations', 'Submit-Incidents')),
-        allowNull: true
-    },
+    permissions: buildPermissionsField(true),
     rank: {
         type: DataTypes.TEXT,
         allowNull: true,
