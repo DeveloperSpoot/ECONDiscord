@@ -2,9 +2,9 @@ const { DataTypes} = require("sequelize");
 const DB = require("../Server.js");
 
 const PERMISSIONS = ['Department-Head', 'Member', 'Department-Management', 'Payroll-Management', 'Shift-Management', 'Finance-Management', 'Citation-Management', 'Vehicle-Management', 'Inventory-Management', 'Submit-ShiftLogs', 'Submit-Citations', 'Submit-Incidents'];
-const isSQLite = DB.getDialect && DB.getDialect() === "sqlite";
 
 function buildPermissionsField(allowNull) {
+    const isSQLite = DB.getDialect && DB.getDialect() === "sqlite";
     if (isSQLite) {
         return {
             type: DataTypes.TEXT,
