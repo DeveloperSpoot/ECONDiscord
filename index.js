@@ -36,6 +36,12 @@ const SQL = require("./dataCrusher/Server");
         console.log("Unable to sync database:", err)
     }
 
+    try {
+        await SQL.models.AdvTransactionLogs.sync();
+    } catch (err) {
+        console.log("Unable to ensure AdvTransactionLogs table exists:", err);
+    }
+
 })()
 
 require('./deploy-commands.js')
