@@ -218,12 +218,13 @@ module.exports = {
             await ErrorEmbed(interaction, err.message)
         }
     },
-    authorizedUser: async function(interaction, user){
+    authorizedUser: async function(interaction, user, type = 'treasury'){
         try{
             const User = await getGuildMember(user.id, interaction.IDENT)
             const result = await SQL.models.AuthorizedUsers.create({
                 guild: interaction.IDENT,
-                id: User.IDENT
+                id: User.IDENT,
+                type: type
             }).catch(async err => {
                 console.error(err);
                 return await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)
@@ -237,5 +238,8 @@ module.exports = {
             await ErrorEmbed(interaction, err.message)
         }
 
+    },
+    cbAuthorizedUser: async function(interaction, user){
+        return this.authorizedUser(interaction, user, 'centralbank');
     },
 }

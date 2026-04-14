@@ -184,11 +184,28 @@ module.exports = {
             if(User === null){
                 return null
             }
-            return await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT}})
+            return await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'treasury'}})
         },
         deauthorize: async function(interaction, user){
             const User = await getGuildMember(user.id, interaction.IDENT);
-            return await SQL.models.AuthorizedUsers.destroy({where: {id: User.IDENT}});
+            return await SQL.models.AuthorizedUsers.destroy({where: {id: User.IDENT, type: 'treasury'}});
+        }
+    },
+    CentralBank: {
+        checkAuthorization: async function(interaction, user){
+            const User = await getGuildMember(user.id, interaction.IDENT);
+            if(interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)){
+                return true;
+            }
+
+            if(User === null){
+                return null
+            }
+            return await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'centralbank'}})
+        },
+        deauthorize: async function(interaction, user){
+            const User = await getGuildMember(user.id, interaction.IDENT);
+            return await SQL.models.AuthorizedUsers.destroy({where: {id: User.IDENT, type: 'centralbank'}});
         }
     },
 }

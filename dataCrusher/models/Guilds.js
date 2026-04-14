@@ -71,6 +71,11 @@ module.exports = DB.define("Guilds", {
         allowNull: true,
         defaultValue: null
     },
+    cbBalance: {
+        type: DataTypes.DECIMAL(20, 2),
+        allowNull: false,
+        defaultValue: 0.00
+    },
     entanglement:{
         type: DataTypes.TEXT,
         allowNull: true

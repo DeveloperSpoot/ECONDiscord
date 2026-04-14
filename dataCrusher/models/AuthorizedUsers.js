@@ -23,6 +23,11 @@ module.exports = DB.define("AuthorizedUsers", {
             model: "GuildMembers",
             key: "IDENT"
         }
+    },
+    type: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: 'treasury'
     }
 }, {
     freezeTableName: true

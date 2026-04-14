@@ -44,7 +44,7 @@ async function getGuildStrength(guildId) {
         where: { GuildIDENT: guildId }
     }) ?? 0;
     const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0);
+    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0) + Number(guildRecord?.cbBalance ?? 0);
 
     const strength = serverStrength(M, V, E, C);
 

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require("discord.js");
 const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
-const { GuildHQ, RetrieveData, NotificationHQ, CreateData } = require("../dataCrusher/Headquarters");
+const { GuildHQ, RetrieveData, NotificationHQ, CreateData, PermManager } = require("../dataCrusher/Headquarters");
 const { getGuildStrength } = require("../dataCrusher/services/forexService");
 const { convertCurrency, ALPHA, BETA } = require("../utils/forexStrength");
 const { Op } = require("sequelize");
@@ -10,7 +10,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("centralbank")
         .setDescription("Central bank operations — money supply, printing, and foreign reserves.")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+
+        // balance
+        .addSubcommand(sub =>
+            sub.setName("balance")
+                .setDescription("View the Central Bank balance."))
 
         // money-supply
         .addSubcommand(sub =>
@@ -20,7 +24,7 @@ module.exports = {
         // print
         .addSubcommand(sub =>
             sub.setName("print")
-                .setDescription("Print new money into the treasury.")
+                .setDescription("Print new money into the Central Bank.")
                 .addNumberOption(opt =>
                     opt.setName("amount")
                         .setDescription("Amount to print.")
@@ -35,7 +39,26 @@ module.exports = {
             sub.setName("report")
                 .setDescription("Macro-economic dashboard for this server."))
 
-        // reserves view
+        // authorize subcommand group
+        .addSubcommandGroup(group =>
+            group.setName("authorize")
+                .setDescription("Manage who can use Central Bank commands.")
+                .addSubcommand(sub =>
+                    sub.setName("add")
+                        .setDescription("Authorize a user to manage the Central Bank.")
+                        .addUserOption(opt =>
+                            opt.setName("user")
+                                .setDescription("The user to authorize.")
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub.setName("remove")
+                        .setDescription("Remove a user's Central Bank authorization.")
+                        .addUserOption(opt =>
+                            opt.setName("user")
+                                .setDescription("The user to deauthorize.")
+                                .setRequired(true))))
+
+        // reserves subcommand group
         .addSubcommandGroup(group =>
             group.setName("reserves")
                 .setDescription("Manage foreign currency reserves.")
@@ -88,19 +111,84 @@ module.exports = {
         const guildId = interaction.IDENT;
         const guildManager = new GuildHQ(interaction);
 
-        // Determine subcommand — handle subcommand groups
+        // Determine full subcommand key (group + sub or just sub)
         let sub;
-        try {
-            const group = interaction.options.getSubcommandGroup(false);
-            sub = group ? `${group} ${interaction.options.getSubcommand()}` : interaction.options.getSubcommand();
-        } catch {
-            sub = interaction.options.getSubcommand();
+        const group = interaction.options.getSubcommandGroup(false);
+        sub = group ? `${group} ${interaction.options.getSubcommand()}` : interaction.options.getSubcommand();
+
+        // ── authorize add/remove — owner-only gate ────────────────────────────
+        if (sub === "authorize add" || sub === "authorize remove") {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+            if (interaction.user.id !== interaction.guild.ownerId) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Only the server owner can manage Central Bank authorizations.")]
+                });
+            }
+
+            const user = interaction.options.getUser("user");
+
+            if (sub === "authorize add") {
+                await CreateData.cbAuthorizedUser(interaction, user).catch(async err => {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription(`Error: ${err.message}`)]
+                    });
+                });
+
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder()
+                        .setColor("Green")
+                        .setTitle("CB Authorization Granted")
+                        .setDescription(`<@${user.id}> can now manage the Central Bank.`)
+                        .setTimestamp()]
+                });
+            }
+
+            if (sub === "authorize remove") {
+                const check = await PermManager.CentralBank.checkAuthorization(interaction, user);
+                if (!check) {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription(`<@${user.id}> does not have Central Bank authorization.`)]
+                    });
+                }
+                await PermManager.CentralBank.deauthorize(interaction, user);
+
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder()
+                        .setColor("Green")
+                        .setTitle("CB Authorization Removed")
+                        .setDescription(`<@${user.id}>'s Central Bank authorization has been removed.`)
+                        .setTimestamp()]
+                });
+            }
+        }
+
+        // ── All other subcommands require CB authorization ────────────────────
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const auth = await PermManager.CentralBank.checkAuthorization(interaction, interaction.user);
+        if (!auth) {
+            return interaction.editReply({
+                embeds: [new EmbedBuilder().setColor("Red").setDescription("You are not authorized to manage the Central Bank.")]
+            });
+        }
+
+        // ── balance ───────────────────────────────────────────────────────────
+        if (sub === "balance") {
+            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
+            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
+
+            const embed = new EmbedBuilder()
+                .setTitle(`${interaction.guild.name} — Central Bank Balance`)
+                .setColor("Blue")
+                .setDescription(await guildManager.formatMoney(cbBalance))
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [embed] });
         }
 
         // ── money-supply ──────────────────────────────────────────────────────
         if (sub === "money-supply") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const walletSum = await SQL.models.Accounts.sum("balance", {
                 where: { guild: guildId, type: "personal-wallet" }
             }) ?? 0;
@@ -115,8 +203,9 @@ module.exports = {
             }) ?? 0;
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
             const treasury = Number(guildRecord?.balance ?? 0);
+            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
 
-            const total = Number(walletSum) + Number(bankSum) + Number(businessSum) + Number(departmentSum) + treasury;
+            const total = Number(walletSum) + Number(bankSum) + Number(businessSum) + Number(departmentSum) + treasury + cbBalance;
 
             const embed = new EmbedBuilder()
                 .setTitle(`${interaction.guild.name} — Money Supply`)
@@ -127,6 +216,7 @@ module.exports = {
                     { name: "Business Accounts", value: await guildManager.formatMoney(businessSum), inline: true },
                     { name: "Departments", value: await guildManager.formatMoney(departmentSum), inline: true },
                     { name: "Treasury", value: await guildManager.formatMoney(treasury), inline: true },
+                    { name: "Central Bank", value: await guildManager.formatMoney(cbBalance), inline: true },
                     { name: "Total Circulation", value: await guildManager.formatMoney(total), inline: false }
                 )
                 .setTimestamp();
@@ -136,8 +226,6 @@ module.exports = {
 
         // ── print ─────────────────────────────────────────────────────────────
         if (sub === "print") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const amount = interaction.options.getNumber("amount");
             const memo = interaction.options.getString("memo");
 
@@ -148,11 +236,11 @@ module.exports = {
             }
 
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-            const oldBalance = Number(guildRecord?.balance ?? 0);
-            const newBalance = oldBalance + amount;
+            const oldCbBalance = Number(guildRecord?.cbBalance ?? 0);
+            const newCbBalance = oldCbBalance + amount;
 
             await SQL.models.Guilds.update(
-                { balance: newBalance },
+                { cbBalance: newCbBalance },
                 { where: { IDENT: guildId } }
             );
 
@@ -165,18 +253,18 @@ module.exports = {
                 debitAccount: guildId,
                 creditType: "Treasury",
                 debitType: "Treasury",
-                memo: `PRINT | ${memo}`
+                memo: `CB PRINT | ${memo}`
             }).catch(console.error);
 
-            const expansionPct = oldBalance > 0 ? ((amount / oldBalance) * 100).toFixed(2) : "N/A";
+            const expansionPct = oldCbBalance > 0 ? ((amount / oldCbBalance) * 100).toFixed(2) : "N/A";
 
             const embed = new EmbedBuilder()
-                .setTitle("Money Printed")
+                .setTitle("Money Printed — Central Bank")
                 .setColor("Green")
                 .addFields(
                     { name: "Amount Printed", value: await guildManager.formatMoney(amount), inline: true },
-                    { name: "Treasury Before", value: await guildManager.formatMoney(oldBalance), inline: true },
-                    { name: "Treasury After", value: await guildManager.formatMoney(newBalance), inline: true },
+                    { name: "CB Balance Before", value: await guildManager.formatMoney(oldCbBalance), inline: true },
+                    { name: "CB Balance After", value: await guildManager.formatMoney(newCbBalance), inline: true },
                     { name: "Expansion", value: expansionPct !== "N/A" ? `${expansionPct}%` : "N/A", inline: true },
                     { name: "Memo", value: memo, inline: false }
                 )
@@ -187,34 +275,28 @@ module.exports = {
 
         // ── report ────────────────────────────────────────────────────────────
         if (sub === "report") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-            // Money supply
             const walletSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-wallet" } }) ?? 0);
             const bankSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-bank" } }) ?? 0);
             const businessSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "business" } }) ?? 0);
             const departmentSum = Number(await SQL.models.Department.sum("balance", { where: { GuildIDENT: guildId } }) ?? 0);
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
             const treasury = Number(guildRecord?.balance ?? 0);
-            const totalSupply = walletSum + bankSum + businessSum + departmentSum + treasury;
+            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
+            const totalSupply = walletSum + bankSum + businessSum + departmentSum + treasury + cbBalance;
 
-            // 30-day tx volume
             const txCount = await SQL.models.AdvTransactionLogs.count({
                 where: { guild: guildId, createdAt: { [Op.gte]: since } }
             });
 
-            // Strength metrics
             const { M, V, E, C, strength } = await getGuildStrength(guildId);
 
-            // Total money ever printed
             const printedResult = await SQL.models.MoneyPrints.sum("amount", {
                 where: { guild: guildId }
             });
             const totalPrinted = Number(printedResult ?? 0);
 
-            // Foreign reserves total (converted to domestic at current rates)
             const reserves = await SQL.models.ForexReserves.findAll({
                 where: { guild: guildId },
                 raw: true
@@ -224,13 +306,10 @@ module.exports = {
                 if (Number(r.amount) <= 0) continue;
                 try {
                     const foreignStats = await getGuildStrength(r.foreignGuild);
-                    const homeStats = { strength };
-                    if (foreignStats.strength > 0 && homeStats.strength > 0) {
-                        reserveValueDomestic += convertCurrency(Number(r.amount), foreignStats.strength, homeStats.strength);
+                    if (foreignStats.strength > 0 && strength > 0) {
+                        reserveValueDomestic += convertCurrency(Number(r.amount), foreignStats.strength, strength);
                     }
-                } catch {
-                    // skip if foreign server data unavailable
-                }
+                } catch { /* skip */ }
             }
 
             const embed = new EmbedBuilder()
@@ -239,6 +318,7 @@ module.exports = {
                 .addFields(
                     { name: "Total Money Supply", value: await guildManager.formatMoney(totalSupply), inline: true },
                     { name: "Treasury Balance", value: await guildManager.formatMoney(treasury), inline: true },
+                    { name: "Central Bank Balance", value: await guildManager.formatMoney(cbBalance), inline: true },
                     { name: "Total Ever Printed", value: await guildManager.formatMoney(totalPrinted), inline: true },
                     { name: "Transactions (30d)", value: String(txCount), inline: true },
                     { name: "Strength Score (S)", value: strength.toFixed(6), inline: true },
@@ -255,8 +335,6 @@ module.exports = {
 
         // ── reserves view ─────────────────────────────────────────────────────
         if (sub === "reserves view") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const reserves = await SQL.models.ForexReserves.findAll({
                 where: { guild: guildId },
                 raw: true
@@ -296,8 +374,6 @@ module.exports = {
 
         // ── reserves buy ──────────────────────────────────────────────────────
         if (sub === "reserves buy") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const foreignGuildId = interaction.options.getString("foreign-server");
             const amount = interaction.options.getNumber("amount");
 
@@ -315,11 +391,11 @@ module.exports = {
             }
 
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-            const treasuryBalance = Number(guildRecord?.balance ?? 0);
+            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
 
-            if (treasuryBalance < amount) {
+            if (cbBalance < amount) {
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient treasury funds. Balance: ${await guildManager.formatMoney(treasuryBalance)}`)]
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient Central Bank funds. CB Balance: ${await guildManager.formatMoney(cbBalance)}`)]
                 });
             }
 
@@ -336,13 +412,11 @@ module.exports = {
 
             const foreignUnits = convertCurrency(amount, homeStats.strength, foreignStats.strength);
 
-            // Deduct from treasury
             await SQL.models.Guilds.update(
-                { balance: treasuryBalance - amount },
+                { cbBalance: cbBalance - amount },
                 { where: { IDENT: guildId } }
             );
 
-            // Upsert ForexReserves
             const [row] = await SQL.models.ForexReserves.findOrCreate({
                 where: { guild: guildId, foreignGuild: foreignGuildId },
                 defaults: { guild: guildId, foreignGuild: foreignGuildId, amount: 0 }
@@ -375,8 +449,6 @@ module.exports = {
 
         // ── reserves sell ─────────────────────────────────────────────────────
         if (sub === "reserves sell") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
             const foreignGuildId = interaction.options.getString("foreign-server");
             const amount = interaction.options.getNumber("amount");
 
@@ -415,13 +487,11 @@ module.exports = {
 
             const domesticReceived = convertCurrency(amount, foreignStats.strength, homeStats.strength);
 
-            // Deduct from reserves
             await reserveRow.decrement("amount", { by: amount });
 
-            // Credit treasury
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
             await SQL.models.Guilds.update(
-                { balance: Number(guildRecord.balance) + domesticReceived },
+                { cbBalance: Number(guildRecord.cbBalance ?? 0) + domesticReceived },
                 { where: { IDENT: guildId } }
             );
 
