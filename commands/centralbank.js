@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { GuildHQ, RetrieveData, NotificationHQ, CreateData, PermManager } = require("../dataCrusher/Headquarters");
@@ -139,7 +139,7 @@ module.exports = {
 
         // ── authorize add/remove — owner-only gate ────────────────────────────
         if (sub === "authorize add" || sub === "authorize remove") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply({});
 
             if (interaction.user.id !== interaction.guild.ownerId) {
                 return interaction.editReply({
@@ -185,7 +185,7 @@ module.exports = {
         }
 
         // ── All other subcommands require CB authorization ────────────────────
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({});
 
         const auth = await PermManager.CentralBank.checkAuthorization(interaction, interaction.user);
         if (!auth) {
