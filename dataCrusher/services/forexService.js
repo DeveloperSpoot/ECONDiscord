@@ -1,6 +1,6 @@
 const { Op } = require("sequelize");
 const SQL = require("../Server");
-const { serverStrength } = require("../../utils/forexStrength");
+const { serverStrength, M_PER_MEMBER, E_PER_MEMBER } = require("../../utils/forexStrength");
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -35,6 +35,12 @@ async function getGuildStrength(guildId) {
             createdAt: { [Op.gte]: since }
         }
     });
+
+    // Cold-start fallback: if no activity has been recorded yet, estimate from member count
+    const memberCount = await SQL.models.GuildMembers.count({ where: { guild: guildId } });
+    if (M === 0) M = memberCount * M_PER_MEMBER;
+    if (E === 0) E = memberCount * E_PER_MEMBER;
+    // V stays 0 — no reasonable proxy exists
 
     // C: total money in circulation = sum of all account balances + treasury
     const accountSum = await SQL.models.Accounts.sum("balance", {

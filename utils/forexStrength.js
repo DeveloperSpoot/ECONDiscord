@@ -11,6 +11,12 @@
 const ALPHA = 1.0; // weight: server activity (messages + VC minutes)
 const BETA  = 2.0; // weight: economic productivity (transaction count)
 
+// Cold-start fallback constants — used when a server has no recorded activity yet.
+// These kick in only when the real metric is exactly 0, and are replaced by real data
+// as soon as any activity is recorded.
+const M_PER_MEMBER = 30; // estimated messages per registered member per month
+const E_PER_MEMBER = 5;  // estimated transactions per registered member per month
+
 /**
  * Computes the economic strength score for a server.
  * @param {number} M - Message count (last 30 days)
@@ -36,4 +42,4 @@ function convertCurrency(amountA, strengthA, strengthB) {
     return amountA * (strengthA / strengthB);
 }
 
-module.exports = { serverStrength, convertCurrency, ALPHA, BETA };
+module.exports = { serverStrength, convertCurrency, ALPHA, BETA, M_PER_MEMBER, E_PER_MEMBER };
