@@ -277,7 +277,13 @@ module.exports = {
                 memo: `CB PRINT | ${memo}`
             }).catch(console.error);
 
-            const expansionPct = oldCbBalance > 0 ? ((amount / oldCbBalance) * 100).toFixed(2) : "N/A";
+            const walletSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-wallet" } }) ?? 0);
+            const bankSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-bank" } }) ?? 0);
+            const businessSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "business" } }) ?? 0);
+            const departmentSum = Number(await SQL.models.Department.sum("balance", { where: { GuildIDENT: guildId } }) ?? 0);
+            const treasuryBal = Number(guildRecord?.balance ?? 0);
+            const totalCirculation = walletSum + bankSum + businessSum + departmentSum + treasuryBal + oldCbBalance;
+            const expansionPct = totalCirculation > 0 ? ((amount / totalCirculation) * 100).toFixed(2) : "N/A";
 
             const embed = new EmbedBuilder()
                 .setTitle("Money Printed — Central Bank")
