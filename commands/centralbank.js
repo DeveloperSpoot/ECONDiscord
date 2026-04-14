@@ -39,6 +39,27 @@ module.exports = {
             sub.setName("report")
                 .setDescription("Macro-economic dashboard for this server."))
 
+        // transfer
+        .addSubcommand(sub =>
+            sub.setName("transfer")
+                .setDescription("Move money between the Central Bank and the Treasury.")
+                .addStringOption(opt =>
+                    opt.setName("direction")
+                        .setDescription("Which way to move the funds.")
+                        .setRequired(true)
+                        .addChoices(
+                            { name: "Central Bank → Treasury", value: "cb-to-treasury" },
+                            { name: "Treasury → Central Bank", value: "treasury-to-cb" }
+                        ))
+                .addNumberOption(opt =>
+                    opt.setName("amount")
+                        .setDescription("Amount to transfer.")
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName("memo")
+                        .setDescription("Reason for the transfer.")
+                        .setRequired(false)))
+
         // authorize subcommand group
         .addSubcommandGroup(group =>
             group.setName("authorize")
@@ -328,6 +349,72 @@ module.exports = {
                     { name: "Foreign Reserves (domestic value)", value: await guildManager.formatMoney(reserveValueDomestic), inline: true }
                 )
                 .setFooter({ text: `α=${ALPHA} β=${BETA}  |  S = (α·(M+V) + β·E) / C` })
+                .setTimestamp();
+
+            return interaction.editReply({ embeds: [embed] });
+        }
+
+        // ── transfer ──────────────────────────────────────────────────────────
+        if (sub === "transfer") {
+            const direction = interaction.options.getString("direction");
+            const amount = interaction.options.getNumber("amount");
+            const memo = interaction.options.getString("memo") ?? "Internal transfer";
+
+            if (amount <= 0) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Amount must be greater than zero.")]
+                });
+            }
+
+            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
+            const treasury = Number(guildRecord?.balance ?? 0);
+            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
+
+            if (direction === "cb-to-treasury") {
+                if (cbBalance < amount) {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient Central Bank funds. CB Balance: ${await guildManager.formatMoney(cbBalance)}`)]
+                    });
+                }
+                await SQL.models.Guilds.update(
+                    { cbBalance: cbBalance - amount, balance: treasury + amount },
+                    { where: { IDENT: guildId } }
+                );
+            } else {
+                if (treasury < amount) {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient Treasury funds. Treasury Balance: ${await guildManager.formatMoney(treasury)}`)]
+                    });
+                }
+                await SQL.models.Guilds.update(
+                    { balance: treasury - amount, cbBalance: cbBalance + amount },
+                    { where: { IDENT: guildId } }
+                );
+            }
+
+            await SQL.models.AdvTransactionLogs.create({
+                guild: guildId,
+                amount: amount,
+                creditAccount: guildId,
+                debitAccount: guildId,
+                creditType: "Treasury",
+                debitType: "Treasury",
+                memo: `CB TRANSFER | ${direction === "cb-to-treasury" ? "CB→Treasury" : "Treasury→CB"} | ${memo}`
+            }).catch(console.error);
+
+            const [fromLabel, toLabel] = direction === "cb-to-treasury"
+                ? ["Central Bank", "Treasury"]
+                : ["Treasury", "Central Bank"];
+
+            const embed = new EmbedBuilder()
+                .setTitle("Transfer Complete")
+                .setColor("Green")
+                .addFields(
+                    { name: "From", value: fromLabel, inline: true },
+                    { name: "To", value: toLabel, inline: true },
+                    { name: "Amount", value: await guildManager.formatMoney(amount), inline: true },
+                    { name: "Memo", value: memo, inline: false }
+                )
                 .setTimestamp();
 
             return interaction.editReply({ embeds: [embed] });
