@@ -133,25 +133,6 @@ module.exports = {
 
         )
 
-        //  Print Money
-        .addSubcommand((subcommand) =>
-            subcommand
-                .setName('print-money')
-                .setDescription('Generates money and places it into the treasury general account for distribution.')
-                .addNumberOption((option) =>
-                    option
-                        .setName('amount')
-                        .setDescription('The amount of money you would like to generate.')
-                        .setRequired(true)
-                )
-                .addStringOption((option) =>
-                    option
-                        .setName('reason')
-                        .setDescription('Why are you printing money out of thin air?')
-                        .setRequired(true)
-                )
-        )
-
         //  Add Department
         .addSubcommand((subcommand) =>
             subcommand
@@ -1235,19 +1216,6 @@ module.exports = {
                         return await ErrorEmbed(interaction, err.message, false, false);
                     }
 
-                } break
-
-            case 'print-money':
-                {
-                    const MoneyFormat = new Intl.NumberFormat('en-us', { currency: 'USD', style: 'currency' })
-
-                    const treasury = await RetrieveData.treasury(interaction.IDENT);
-                    await UpdateData.treasuryBalance(interaction.IDENT, Number(treasury.balance) + interaction.options.getNumber('amount'));
-                    await CreateData.treasuryPrint(interaction, interaction.options.getNumber('amount'), interaction.options.getString('reason'))
-                    const embed = await SimpleEmbed(interaction, 'Inflation Successful', 'The balance of the treasury account is now ' + await guildManager.formatMoney(Number(treasury.balance) + Number(interaction.options.getNumber('amount'))), 'Green', null);
-                    interaction.reply({ embeds: [embed], components: [] });
-
-                    await NotificationHQ.inflationNotification(interaction, interaction.options.getNumber('amount'));
                 } break
 
             case 'add-department':

@@ -23,7 +23,7 @@ const SQL = require("./dataCrusher/Server");
         // await SQL.models.DepartmentMembers.sync()
         // await SQL.models.Citation.sync()
         // await SQL.models.Fee.sync()
-        await SQL.models.Guilds.sync({alter: true}) // ADD incomeTaxBrackets column — comment out after first restart
+        // await SQL.models.Guilds.sync({alter: true}) // ADD incomeTaxBrackets column — comment out after first restart
         // await SQL.models.Guilds.sync({alter: true})
         // await SQL.models.GuildMembersc({alter:true})
         // await SQL.sync({force: true})
@@ -48,8 +48,7 @@ require('./deploy-commands.js')
 const fs = require("node:fs");
 const path = require("node:path");
 const fetch = require("node-fetch");
-const {Client, Collection, GatewayIntentBits, Partials, InteractionType, WebhookClient, EmbedBuilder, ButtonBuilder,
-    ButtonStyle, ActionRowBuilder, MessageFlags
+const {Client, Collection, GatewayIntentBits, Partials, InteractionType, MessageFlags
 } = require("discord.js");
 const {Guilds, DiscordUsers, GuildMembers, ModalAccounts} = require("./dataCrusher/models/Modals");
 const {RetrieveData, UpdateData, UserHQ} = require("./dataCrusher/Headquarters");
@@ -61,7 +60,16 @@ const {serverJoin, serverLeave} = require("./dataCrusher/services/notify");
 const {request} = require("undici");
 require("dotenv").config();
 
-const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], partials: [Partials.Channel]});
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,   // required to read message.content for spam guards
+        GatewayIntentBits.GuildVoiceStates  // required for voiceStateUpdate VC tracking
+    ],
+    partials: [Partials.Channel]
+});
 
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, "commands");
@@ -84,8 +92,6 @@ for (const file of commandFiles) {
     PREIMUM COMMANDS LIST
     ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax"
  */
-let preimumCMDS = ["quick-sell", "set-currency", "set-payroll-tax", "set-sales-tax", "inflate", "deflate"];
-let serverbypass = (process.env.server_bypass).split(", ") // Bypasses premium checks. Format: "serverid, serverid"
 
 client.on("interactionCreate", async interaction => {
     if (interaction.isAutocomplete()) return;
@@ -120,36 +126,7 @@ client.on("interactionCreate", async interaction => {
         subCommandProvided = false;
     }
 
-    let accessGranted = true;
-    let accessUnknown = false;
-
-    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand()) && !serverbypass.includes(interaction.guildId)){
-        let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
-        if(discordPremium.size !== 0){
-            accessUnknown = false;
-            accessGranted = true;
-        } else {
-        accessGranted = false    
-        }
-    }
-
-    if(!accessGranted){
-        const action = new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setURL("https://discord.com/application-directory/1077139728538812416/store/1260839276069785653")
-            .setLabel("Upgrade To Premium");
-
-        const row = new ActionRowBuilder()
-            .addComponents(action)
-        const premiumNotice = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle("Premium Command")
-            .setURL("https://discord.com/application-directory/1077139728538812416/store/1260839276069785653")
-            .setColor("Blue")
-            .setDescription("This Command Is ONLY Available To Our **Premium Members**. To Gain Access To This Command, The Server Must Subscribe.")
-        await interaction.reply({embeds: [premiumNotice], components: [row]});
-        return
-    }
+    const accessGranted = true;
 
     let numberOption;
     try {
@@ -231,46 +208,6 @@ client.on("interactionCreate", async interaction => {
     }
 
     const command = client.commands.get(interaction.commandName);
-
-    let subCommandProvided = false;
-
-    try{
-        interaction.options.getSubcommand();
-        subCommandProvided = true;
-    }catch(er){
-        subCommandProvided = false;
-    }
-
-    let accessGranted = true;
-    let accessUnknown = false;
-
-    if(subCommandProvided && preimumCMDS.includes(interaction.options.getSubcommand()) && !serverbypass.includes(interaction.guildId)){
-        let discordPremium = interaction.entitlements.filter(sku => sku.guildId === interaction.guildId && sku.isActive() && sku.deleted === false && sku.skuId === "1260839276069785653");
-        if(discordPremium.size !== 0){
-            accessUnknown = false;
-            accessGranted = true;
-        } else {
-        accessGranted = false    
-        }
-    }
-
-    if(!accessGranted){
-        const action = new ButtonBuilder()
-            .setStyle(ButtonStyle.Link)
-            .setURL("https://discord.com/application-directory/1077139728538812416/store/1260839276069785653")
-            .setLabel("Upgrade To Premium");
-
-        const row = new ActionRowBuilder()
-            .addComponents(action)
-        const premiumNotice = new EmbedBuilder()
-            .setColor('#2B2D31')
-            .setTitle("Premium Command")
-            .setColor("Blue")
-            .setURL("https://discord.com/application-directory/1077139728538812416/store/1260839276069785653")
-            .setDescription("This Command Is ONLY Available To Our **Premium Members**. To Gain Access To This Command, The Server Must Subscribe.")
-        await interaction.reply({embeds: [premiumNotice], components: [row]});
-        return;
-    }
 
     if (!command) return;
 
