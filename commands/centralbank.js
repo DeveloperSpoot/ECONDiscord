@@ -111,7 +111,7 @@ module.exports = {
                 where: { guild: guildId, type: "business" }
             }) ?? 0;
             const departmentSum = await SQL.models.Department.sum("balance", {
-                where: { guild: guildId }
+                where: { GuildIDENT: guildId }
             }) ?? 0;
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
             const treasury = Number(guildRecord?.balance ?? 0);
@@ -195,7 +195,7 @@ module.exports = {
             const walletSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-wallet" } }) ?? 0);
             const bankSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "personal-bank" } }) ?? 0);
             const businessSum = Number(await SQL.models.Accounts.sum("balance", { where: { guild: guildId, type: "business" } }) ?? 0);
-            const departmentSum = Number(await SQL.models.Department.sum("balance", { where: { guild: guildId } }) ?? 0);
+            const departmentSum = Number(await SQL.models.Department.sum("balance", { where: { GuildIDENT: guildId } }) ?? 0);
             const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
             const treasury = Number(guildRecord?.balance ?? 0);
             const totalSupply = walletSum + bankSum + businessSum + departmentSum + treasury;
