@@ -14,8 +14,8 @@ const BETA  = 2.0; // weight: economic productivity (transaction count)
 // Cold-start fallback constants — used when a server has no recorded activity yet.
 // These kick in only when the real metric is exactly 0, and are replaced by real data
 // as soon as any activity is recorded.
-const M_PER_MEMBER = 30; // estimated messages per registered member per month
-const E_PER_MEMBER = 5;  // estimated transactions per registered member per month
+const M_PER_MEMBER = 5; // estimated messages per registered member per month (cold-start only)
+const E_PER_MEMBER = 1; // estimated transactions per registered member per month (cold-start only)
 
 /**
  * Computes the economic strength score for a server.
