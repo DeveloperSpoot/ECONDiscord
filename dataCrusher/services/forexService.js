@@ -29,7 +29,7 @@ async function getGuildStrength(guildId) {
     }
 
     // E: transaction count from last 30 days
-    const E = await SQL.models.AdvTransactionLogs.count({
+    let E = await SQL.models.AdvTransactionLogs.count({
         where: {
             guild: guildId,
             createdAt: { [Op.gte]: since }
