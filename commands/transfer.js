@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { RetrieveData, GuildHQ, DepartmentHQ, BusinessHQ, PermManager } = require("../dataCrusher/Headquarters");
@@ -141,7 +141,7 @@ module.exports = {
             return ErrorEmbed(interaction, "This command can only be used inside a server.");
         }
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply();
 
         const sub = interaction.options.getSubcommand();
         const amount = interaction.options.getNumber("amount");
