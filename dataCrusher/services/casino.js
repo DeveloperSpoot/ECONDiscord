@@ -304,11 +304,15 @@ Casino.prototype = {
                 return 
             }
 
+            // If only the player has blackjack, player won
+
             if(playerBlackJack && dealersValue !==21){
                 playerWin = true;
                 playersResponse.update(getEmbed())
                 return;
             }
+
+            // If only the dealer has blackjack, delaer won
 
             if(dealersValue === 21 && playersValueOne < 21){
                 dealersBlackJack = true;
@@ -317,6 +321,8 @@ Casino.prototype = {
                 return;
             }
 
+            // if the player and dealer has the same amount, push.
+
             if(playersValueOne === dealersValue){
                 push = true;
                 playerWin = false;
@@ -324,7 +330,7 @@ Casino.prototype = {
                 return;
             }
 
-            if(dealersValue >=17 && playersValueOne >= 18){
+            if(dealersValue >=17 && playersValueOne > dealersValue){
                 playerWin = true;
                 playersResponse.update(getEmbed())
                 return;
