@@ -294,7 +294,7 @@ Casino.prototype = {
             }
             
 
-            return playerWin;
+            return [playerWin, bet, push];
         }
 
         async function dealerPlay(playersResponse){

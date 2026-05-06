@@ -110,7 +110,7 @@ module.exports = {
             return;
           }
 
-          userManager.payCasino(Number(results[1]));
+          userManager.payCasino(Number(bet));
 
           return;
           break;
