@@ -533,7 +533,9 @@ module.exports = {
 
         let currentPage = 1;
 
-        const firstDesc = await pageDescription(paginatedItems[currentPage]);
+        let firstDesc = await pageDescription(paginatedItems[currentPage]);
+
+        if(ITEMS.length == 0){firstDesc = "This Business Has No Items."}
 
         let pageEmbed = new EmbedBuilder()
           .setTitle(`${busName} Items`)
