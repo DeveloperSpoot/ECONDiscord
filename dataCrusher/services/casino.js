@@ -323,7 +323,7 @@ Casino.prototype = {
 
             // if the player and dealer has the same amount, push.
 
-            if(playersValueOne === dealersValue){
+            if(playersValueOne === dealersValue && dealersValue > 16){
                 push = true;
                 playerWin = false;
                 playersResponse.update(getEmbed())
