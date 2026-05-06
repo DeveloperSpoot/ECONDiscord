@@ -1062,7 +1062,7 @@ module.exports = {
             "Please choose the permissions you would like to grant to this individual."
           )
           .setMinValues(1)
-          .setMaxValues(7);
+          .setMaxValues(6);
 
         const perms = [
           {
@@ -1094,15 +1094,10 @@ module.exports = {
             value: "Citation-Management",
           },
           {
-            label: "Submit Shift Logs",
-            description: "Submit shift logs.",
-            value: "Submit-ShiftLogs",
-          },
-          {
             label: "Submit Fines & Fees",
             description: "Submit Fines and Fees.",
             value: "Submit-Citations",
-          },
+          }
         ];
         menu.addOptions(perms);
         const row = new ActionRowBuilder();
@@ -1129,17 +1124,16 @@ module.exports = {
           })
           .then(async (selection) => {
             if (selection.customId === "permSelector") {
-              await Department.addRoleBind(role, selection.values).catch(
-                async (err) => {
-                  console.error(err);
-                  return await ErrorEmbed(
-                    interaction,
-                    `An error occurred: ${err.message}`,
-                    false,
-                    true
-                  );
-                }
+              rolebindError = await Department.addRoleBind(role, selection.values);
+
+              if(rolebindError){
+                return await ErrorEmbed(
+                interaction,
+                err.message,
+                false,
+                false
               );
+              }
               const embed = await SimpleEmbed(
                 interaction,
                 "Role Binded Successfully!",

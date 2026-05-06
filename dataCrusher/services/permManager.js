@@ -158,15 +158,15 @@ module.exports = {
                     if(interaction.member.roles.cache.some(r => r.id === DR.id)){
                         console.warn('1 P', DR)
                         if(DR.permissions.find(v => v === "Department-Head")) {
-                            console.error("DH AUTH")
+                            console.warn("DH AUTH")
                             return auth = true;
                         }
                         if(DR.permissions.find(v => v === "Department-Management")) {
-                            console.error("DM AUTH")
+                            console.warn("DM AUTH")
                             return auth = true;
                         }
                         if(DR.permissions.find(v => v === perm)) {
-                            console.error("PERM AUTH")
+                            console.warn("PERM AUTH")
                             return auth = true;
                         }
                     }

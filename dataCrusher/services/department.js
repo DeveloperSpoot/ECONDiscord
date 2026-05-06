@@ -453,10 +453,11 @@ Department.prototype = {
         }
     },
     addRoleBind: async function (role, permissions){
+        let violaton = null;
         try {
+            permissions.push("Member")
             const depName = await this.getName()
-            await LogGeneral(this.interaction, 'Green', 'New Department Role', `<@&${role.id}> has been binded to ${depName}.`)
-        
+            
             let foundBind = await SQL.models.DepartmentRoles.findOne({
                 where: {
                     [Op.and]: [
@@ -467,6 +468,13 @@ Department.prototype = {
                 }
             });
 
+            if (await foundBind.permissions.find(v=> v === "Department-Head")){
+                violaton ="The Department Head Role cannot be added as a role-bind. This role may not be edited."
+              throw new Error(violaton)
+            }
+            
+            await LogGeneral(this.interaction, 'Green', 'New Department Role', `<@&${role.id}> has been binded to ${depName}.`)
+            
             if(foundBind){
                 let updatedBind = await SQL.models.DepartmentRoles.update({
                     DepartmentIDENT: this.IDENT,
@@ -474,20 +482,20 @@ Department.prototype = {
                     id: role.id,
                     permissions: permissions
                 },
-                    {
-                        where: {
-                            [Op.and]: [
-                                {DepartmentIDENT: this.IDENT},
-                                {GuildIDENT: this.interaction.guild.id},
-                                {id: role.id},
-                            ]
-                        }
-                    });
-
-                    
+                {
+                    where: {
+                        [Op.and]: [
+                            {DepartmentIDENT: this.IDENT},
+                            {GuildIDENT: this.interaction.guild.id},
+                            {id: role.id},
+                        ]
+                    }
+                });
+                
+                
                 return updatedBind
             }
-
+            
             let createdBind = await SQL.models.DepartmentRoles.create({
                 DepartmentIDENT: this.IDENT,
                 GuildIDENT: this.interaction.guild.id,
@@ -498,7 +506,14 @@ Department.prototype = {
             return createdBind
         }catch(err){
             console.log(err)
-            await ErrorEmbed(this.interaction, err.message, true, false)
+            await ErrorEmbed(this.interaction, err.message, false, false)
+        }
+
+
+     
+        if(violaton !== ""){
+            console.error("Throwing validation error")
+            throw new Error(violaton)
         }
 
         return await SQL.models.DepartmentRoles.create({
