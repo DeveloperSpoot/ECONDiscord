@@ -297,7 +297,8 @@ User.prototype = {
         }
     },
     findItemInInventory: async function(itemIDENT) {
-      return SQL.models.Inventory.findOne({where: {item: itemIDENT}})
+        const userIDENT = await this.getIDENT();
+      return SQL.models.Inventory.findOne({where: {[Op.and]: [{item: itemIDENT}, {owner: userIDENT}]}})
     },
     getItemInv: async function(itemIDent){
         return SQL.models.Inventory.findByPk(itemIDent, {raw: true, paranoid: false})
