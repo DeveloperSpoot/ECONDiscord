@@ -676,6 +676,10 @@ module.exports = {
               );
             }
 
+            if (busItem.ownMultiple === false && quantity > 1){
+              return ErrorEmbed(interaction, "You can only purchase one of this item because ownMultiple is set to false.");
+            }
+
             let TotalPrice = await (busItem.price * quantity);
 
             const revenueService = new RevenueService(interaction);
@@ -1967,6 +1971,13 @@ module.exports = {
             return ErrorEmbed(
               interaction,
               "This member already owns this item and cannot purchase it again due to the item's ownMultiple setting being set to false."
+            );
+          }
+
+          if (selectedItem.ownMultiple === false && quantity > 1) {
+            return ErrorEmbed(
+              interaction,
+              "This item can only be sold once per member. Ensure that the quantity is set to 1."
             );
           }
 
