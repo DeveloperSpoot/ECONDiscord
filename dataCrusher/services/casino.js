@@ -546,7 +546,59 @@ Casino.prototype = {
         }
 
         return {result: "LOSS", amount: 0, play};
-    }
+    },
+    playRoulette: async function(bet, selection){
+        const treasury = await retrieve.treasury(this.interaction.IDENT);
+        const user = await retrieve.userBasicAccounts(this.interaction, this.interaction.member)
+
+        if(bet > (0.02*treasury.balance)){
+            throw new Error(`You're Bet Is Too High. The Current Maxmium Bet Is ${await this.gManager.formatMoney(0.02*treasury.balance)}. (2% of Treasury Balance)`)
+        }
+
+        if(treasury.balance < bet*10){
+            throw new Error("The Treasury Does Not Have Enough Funds To Pay Out This Bet.");
+        }
+
+        if(user.wallet.balance < bet){
+            throw new Error(`Insufficient Funds In Your Wallet.`);
+        }
+
+        // 38 spaces; repersents the index of the roulette table.
+        ballLandOn = Math.floor(Math.random()*38)
+        colorLanded = rouletteColors[ballLandOn]
+        numberLanded = rouletteNumbers[ballLandOn]
+        
+        // Loss cases when 0 & 00 aren't in play.
+        if(colorLanded === "green" && selection === "black" || colorLanded === "green" && selection === "red"){
+            //LOSS
+            return [bet, false, [numberLanded, colorLanded]]
+        }
+
+        // 00 & 0 are both green spaces.
+        if(colorLanded === "green" && selection === "odds" || colorLanded === "green" && selection === "evens"){
+            // LOSS
+            return [bet, false, [numberLanded, colorLanded]]
+        }
+
+        if(Number(numberLanded) % 2 !== 0 && selection === "odds" || Number(numberLanded) % 2 === 0 && selection === "evens"){
+            // odds/evens WIN
+            return [bet, true, [numberLanded, colorLanded]]
+        }
+
+        if(colorLanded === selection){
+            // Blacks/Reds WIN
+            return [bet, true, [numberLanded, colorLanded]]
+        }
+
+        if(numberLanded === selection){
+            // NUMBER WIN
+            return [bet*10, true, [numberLanded, colorLanded]]
+        }
+
+        //return all losses
+        return [bet, false, [numberLanded, colorLanded]]
+
+    },
 }
 
 function shuffle(array) {
@@ -566,5 +618,49 @@ function shuffle(array) {
 
     return array
   }
+
+  const rouletteNumbers = ["0","28","9","26","30","11","7","20","32","17","5","22","34","15","3","24","36","13","1","00","27","10","25","29","12","8","19","31","18","6","21","33","16","4","23","35","14","2"];
+
+// Matching colors for each slot
+const rouletteColors = [
+  "green", // 0
+  "black", // 28
+  "red",   // 9
+  "black", // 26
+  "red",   // 30
+  "black", // 11
+  "red",   // 7
+  "black", // 20
+  "red",   // 32
+  "black", // 17
+  "red",   // 5
+  "black", // 22
+  "red",   // 34
+  "black", // 15
+  "red",   // 3
+  "black", // 24
+  "red",   // 36
+  "black", // 13
+  "red",   // 1
+  "green", // 00
+  "red",   // 27
+  "black", // 10
+  "red",   // 25
+  "black", // 29
+  "red",   // 12
+  "black", // 8
+  "red",   // 19
+  "black", // 31
+  "red",   // 18
+  "black", // 6
+  "red",   // 21
+  "black", // 33
+  "red",   // 16
+  "black", // 4
+  "red",   // 23
+  "black", // 35
+  "red",   // 14
+  "black"  // 2
+];
 
 module.exports = Casino;
