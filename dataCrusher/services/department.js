@@ -394,7 +394,9 @@ Department.prototype = {
         },
         headRole: async function (Department,headRole){
             const DEPARTMENT = await SQL.models.Department.findByPk(Department.IDENT);
-            await SQL.models.DepartmentRoles.update({id: headRole.id}, {where: {
+
+            //Updates the role-bind
+            await SQL.models.DepartmentRoles.update({id: headRole.id, permissions: ["Member", "Department-Head"]}, {where: {
                     [Op.and]: [
                         {DepartmentIDENT: Department.IDENT},
                         {id: DEPARTMENT.headRole}
@@ -407,6 +409,7 @@ Department.prototype = {
                 console.log(err)
                 await ErrorEmbed(Department.interaction, err.message, true, false)
             }
+            //Updates the department infomation to reflect the change.
             return await SQL.models.Department.update({headRole: headRole.id}, {where: {IDENT: Department.IDENT}}).catch(async err=>{
                 console.warn(err)
                 await ErrorEmbed(this.interaction, err.message)
@@ -415,7 +418,9 @@ Department.prototype = {
         departmentRole: async function(Department,departmentRole){
 
             const DEPARTMENT = await SQL.models.Department.findByPk(Department.IDENT);
-            await SQL.models.DepartmentRoles.update({id: departmentRole.id}, {where: {
+
+            //Updates the role-bind
+            await SQL.models.DepartmentRoles.update({id: departmentRole.id, permissions: ["Member"]}, {where: {
                     [Op.and]: [
                         {DepartmentIDENT: Department.IDENT},
                         {id: DEPARTMENT.memberRole}
@@ -427,6 +432,7 @@ Department.prototype = {
                 console.log(err)
                 await ErrorEmbed(Department.interaction, err.message, true, false)
             }
+            //Updates the department info to reflect the changes.
             return await SQL.models.Department.update({memberRole: departmentRole.id}, {where: {IDENT: Department.IDENT}})
         },
         departmentBudget: async function(Department, departmentBudget){
@@ -469,7 +475,7 @@ Department.prototype = {
             });
 
             if (await foundBind.permissions.find(v=> v === "Department-Head")){
-                violaton ="The Department Head Role cannot be added as a role-bind. This role may not be edited."
+                violaton ="The Department Head Role cannot be added as a role-bind. This role may not be edited through role-bind commands."
               throw new Error(violaton)
             }
             
@@ -527,6 +533,21 @@ Department.prototype = {
         })
     },
     removeRoleBind: async function (interaction, role){
+         let foundBind = await SQL.models.DepartmentRoles.findOne({
+                where: {
+                    [Op.and]: [
+                        {DepartmentIDENT: this.IDENT},
+                        {GuildIDENT: this.interaction.guild.id},
+                        {id: role.id},
+                    ]
+                }
+            });
+
+        if (await foundBind.permissions.find(v=> v === "Department-Head")){
+            violaton ="The Department Head Role cannot be removed. This role may not be edited through role-bind commands."
+              throw new Error(violaton)
+        }
+
         try {
             const depName = await this.getName()
             await LogGeneral(interaction, 'Orange', 'Department Role Removed', `<@&${role.id}> has been removed from ${depName}.`)

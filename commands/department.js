@@ -1221,18 +1221,19 @@ module.exports = {
           })
           .then(async (selection) => {
             if (selection.customId === "roleSelector") {
-              await Department.removeRoleBind(
+              err = await Department.removeRoleBind(
                 interaction,
                 Roles[selection.values]
-              ).catch(async (err) => {
-                console.error(err);
+              )
+
+              if(err){
                 return await ErrorEmbed(
                   interaction,
                   `An error occurred: ${err.message}`,
                   false,
                   true
                 );
-              });
+              }
 
               const embed = await SimpleEmbed(
                 interaction,
