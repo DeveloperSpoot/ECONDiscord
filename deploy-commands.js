@@ -20,7 +20,7 @@ const rest = new REST().setToken(process.env.token);
     try{
         console.log(`Refreshing ${commands.length} application commands.`)
         const data = await rest.put(
-            Routes.applicationCommands(process.env.clientId),
+            Routes.applicationCommands(process.env.clientid),
             {body: commands}
         );
 
