@@ -229,7 +229,7 @@ module.exports = {
             .setColor((win)?"Green":"Red")
             .setFooter({text: "Roulette is in beta."});
 
-            (win)?(await userManager.claimCasinoWinnings(bet)):(await userManager.payCasino(bet))
+            (win)?(await userManager.claimCasinoWinnings(amount)):(await userManager.payCasino(bet))
 
           interaction.reply({embeds: [resultEmbed]})
           break;
