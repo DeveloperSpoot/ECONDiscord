@@ -28,8 +28,8 @@ exports.LedgerGenerator = async function (interaction, AccountNumber, DATA) {
         if (i.creditType && i.debitType) {
             Info = await TransactionHQ.getAccount(interaction, i, true);
         } else {
-            //Info = await TransactionHQ.getBasicName(interaction, i, true)
-            Info = {creditName: `UnknownTransaction-${i.IDENT}`, debitName: "Report To Dev."}
+            Info = await TransactionHQ.getBasicName(interaction, i, true)
+            
         }
 
         const NFormat = new Intl.NumberFormat('en-us', {
