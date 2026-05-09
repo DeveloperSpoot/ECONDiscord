@@ -29,7 +29,7 @@ exports.LedgerGenerator = async function (interaction, AccountNumber, DATA) {
             Info = await TransactionHQ.getAccount(interaction, i, true);
         } else {
             //Info = await TransactionHQ.getBasicName(interaction, i, true)
-            Info = {}
+            Info = {creditName: `UnknownTransaction-${i.IDENT}`, debitName: "Report To Dev."}
         }
 
         const NFormat = new Intl.NumberFormat('en-us', {
