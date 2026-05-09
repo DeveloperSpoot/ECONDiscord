@@ -97,7 +97,7 @@ module.exports = {
         let CredDisUser;
         
         if(Cred == null){
-            CredDisUser = {displayName: "NOT FOUND: "+Log.creditAccount}
+            CredDisUser = {displayName: "DeletedAccount"}
         }else if(Cred?.type == "business"){
             CredOwner = null
             CredDisUser = {}
@@ -119,7 +119,7 @@ module.exports = {
         let DebDisUser;
 
         if(Deb == null){
-            DebDisUser = {displayName: "NOT FOUND: "+Log.debitAccount}
+            DebDisUser = {displayName: "DeletedAccount"}
         }else if(Deb.type == "business"){
             DebOwner = null
             DebDisUser = {};
