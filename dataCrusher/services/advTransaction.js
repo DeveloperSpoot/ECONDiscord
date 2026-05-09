@@ -95,7 +95,10 @@ module.exports = {
 
         let CredOwner;
         let CredDisUser;
-        if(Cred.type == "business"){
+        
+        if(Cred == null){
+            CredDisUser = {displayName: "NOT FOUND: "+Log.creditAccount}
+        }else if(Cred?.type == "business"){
             CredOwner = null
             CredDisUser = {}
             CredDisUser.displayName = Cred.name
@@ -115,7 +118,9 @@ module.exports = {
         let DebOwner;
         let DebDisUser;
 
-        if(Deb.type == "business"){
+        if(Deb == null){
+            DebDisUser = {displayName: "NOT FOUND: "+Log.debitAccount}
+        }else if(Deb.type == "business"){
             DebOwner = null
             DebDisUser = {};
             DebDisUser.displayName = Deb.name
