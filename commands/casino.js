@@ -134,18 +134,21 @@ module.exports = {
           const Casino = new CasinoHQ(interaction, guildManager);
           const userManager = new UserHQ(interaction, interaction.user.id);
 
-          let results = await Casino.playBlackJack(bet, interaction);
+          let results = await Casino.playBlackJack(bet, interaction, userManager);
 
-          if (results[2] === true) {
-            return;
-          }
+          // console.log(results);
+          
 
-          if (results[0] == true) {
-            userManager.claimCasinoWinnings(Number(results[1]));
-            return;
-          }
+          // if (results[2] === true) {
+          //   return;
+          // }
 
-          userManager.payCasino(Number(results[1]));
+          // if (results[0] == true) {
+          //   userManager.claimCasinoWinnings(Number(results[1]));
+          //   return;
+          // }
+
+          // userManager.payCasino(Number(results[1]));
 
           return;
           break;

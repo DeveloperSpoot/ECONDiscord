@@ -60,7 +60,7 @@ Casino.prototype = {
 
         return newDeck;
     },
-    playBlackJack: async function(bet, interact){
+    playBlackJack: async function(bet, interact, userManager){
         const treasury = await retrieve.treasury(this.interaction.IDENT);
         const user = await retrieve.userBasicAccounts(this.interaction, this.interaction.member)
     
@@ -185,12 +185,17 @@ Casino.prototype = {
             if(dealersBlackJack || dealerWin){
                 jackEmbed.addFields({name: "RESULT", value: "Dealer Won"})
                 jackEmbed.setColor("DarkRed")
+
+                userManager.payCasino(bet)
                 return {embeds: [jackEmbed], components: []}
             }
 
             if(playerWin){
                 jackEmbed.addFields({name: "RESULT", value: "You Won"})
                 jackEmbed.setColor("DarkGreen")
+
+                // console.log(`Win: ${playerWin} Amount: ${bet} Push: ${push}`)
+                userManager.claimCasinoWinnings(bet)
                 return {embeds: [jackEmbed], components: []}
             }
 
@@ -198,7 +203,7 @@ Casino.prototype = {
                 dealersTurn = true;
                 jackEmbed.addFields({name: "RESULT", value: "BUST"})
                 jackEmbed.setColor("DarkRed")
-
+                userManager.payCasino(bet)
                 return {embeds: [jackEmbed], components: []}
             }
 
