@@ -35,7 +35,7 @@ Snapml.prototype = {
      */
     getATM: async function(username, bankBalance, walletBalance){
 
-        if(!this.browser || !this.browser.isConnected() || !this.page || page.isClosed()){
+        if(!this.browser || !this.browser.isConnected() || !this.page || this.page.isClosed()){
             await this.open();
         }
 
