@@ -1,0 +1,92 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        #atm img {
+            width: 500px;
+            height: 400px;
+            grid-row-start: 1;
+            grid-row-end: 7;
+            grid-column-start: 1;
+            grid-column-end: 5;
+        }
+        #atm {
+            display: grid;
+            width: 500px;
+            height: 400px;
+            /* 
+            1              2             3              4              5
+            | Fake Buttons | left Screen | Right Screen | Fake Buttons |
+            */
+            grid-template-columns: 95px 154.5px 154.5px 96px;
+            /*
+            1            2               3           4       5             6               7
+            | ECON Brand | Username Area | Bank Area | Space | Wallet Area | Remaing Space |
+            */
+            grid-template-rows: 80px 35px 34px 10px 34px 207px;
+        
+            grid-template-areas: 
+            ". . . ."
+            ". userName userName ."
+            ". . bankBal ."
+            ". . . ."
+            ". . walletBal ."
+            ". . . .";
+        }
+        
+        #username {
+            grid-area: userName;
+            height: 35px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 15px;
+            color: white;
+            align-content: center;
+            padding-top: 10px;
+            padding-left: 15px;
+
+        }
+
+        .balance {
+            height: 35px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            text-align: left;
+            align-content: center;
+            padding-right: 13px;
+            padding-top: 10px;
+            overflow: hidden;
+        }
+
+        #bankBalance {
+            grid-area: bankBal;
+        }
+
+        #walletBalance {
+            grid-area: walletBal;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div id="atm" class="atm">
+        <img src="data:image/png;base64,{{atmImg}}">
+        
+        <!-- Username: Row 2-3 Col 2-4 -->
+        <p id="username">Welcome,{{username}}.</p>
+        
+        <!-- Bank: Row 3-4 Col 3-4 -->
+        <p id="bankBalance" class="balance">{{bankBalance}}</p>
+        
+        <!-- Wallet: Row 5-6 Col 3-4 -->
+        <p id="walletBalance" class="balance">{{walletBalance}}</p>
+    </div>
+</body>
+</html>

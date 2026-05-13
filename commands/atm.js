@@ -1,8 +1,9 @@
 const {CheckStringForNumber} = require("../utils/mathUtils")
-const {RetrieveData, CreateData, UpdateData, GuildHQ} = require("../dataCrusher/Headquarters.js");
+const {RetrieveData, CreateData, UpdateData, GuildHQ, Snapml} = require("../dataCrusher/Headquarters.js");
 const {
     Interaction, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, SlashCommandBuilder,
-    Colors, ButtonStyle, TextInputStyle
+    Colors, ButtonStyle, TextInputStyle,
+    AttachmentBuilder
 } = require("discord.js");
 
 module.exports = {
@@ -25,28 +26,31 @@ module.exports = {
             .setStyle(ButtonStyle.Success);
 
         const withdrawButton = new ButtonBuilder()
-            .setCustomId(`withdraw${Timestamp}`)
-            .setLabel(`Withdraw`)
-            .setStyle(ButtonStyle.Danger);
-
+        .setCustomId(`withdraw${Timestamp}`)
+        .setLabel(`Withdraw`)
+        .setStyle(ButtonStyle.Danger);
+        
         const balanceButton = new ButtonBuilder()
-            .setCustomId(`balance${Timestamp}`)
-            .setLabel("Balance")
-            .setStyle(ButtonStyle.Primary);
+        .setCustomId(`balance${Timestamp}`)
+        .setLabel("Balance")
+        .setStyle(ButtonStyle.Primary);
+        
+        row.addComponents(depositButton, withdrawButton);
 
-        row.addComponents(depositButton, withdrawButton, balanceButton);
+        const accts = await RetrieveData.userBasicAccounts(interaction, interaction.member);
+        
+        const newAtmImage = await Snapml.getATM(interaction.member.displayName, Number(accts.bank.balance).toLocaleString("en-US"), Number(accts.wallet.balance).toLocaleString("en-US"))
+        const imgAttach = new AttachmentBuilder(newAtmImage, {name:"ECON_atm.png"})
 
         const atmEmbed = new EmbedBuilder()
-            .setTitle("ATM")
-            .setDescription(
-                "Welcome to the automated teller system! Please choose the action you would like to perform."
-            )
-            .setColor(Colors.Green)
+            // .setTitle("ATM")
+            .setImage("attachment://ECON_atm.png")
+            // .setColor(Colors.Green)
             .setFooter({
                 text: interaction.guild.name + " Economy System",
                 iconURL: interaction.guild.iconURL(),
             });
-        await interaction.reply({embeds: [atmEmbed], components: [row]});
+        await interaction.reply({embeds: [atmEmbed], components: [row], files: [imgAttach]});
 
         const buttonFilter = (i) =>
             (i.customId === `deposit${Timestamp}` ||
@@ -61,6 +65,7 @@ module.exports = {
         const buttonCollector = interaction.channel.createMessageComponentCollector(
             {buttonFilter, idle: 120000}
         );
+
 
         buttonCollector.on("collect", async (i) => {
             if (
@@ -121,7 +126,7 @@ module.exports = {
                             }
                             const amtFloat = amt;
                             if (amtFloat > 0) {
-                                const accts = await RetrieveData.userBasicAccounts(interaction, res.member);
+                              
                                 let params = [res, accts.bank.id, accts.wallet.id, amtFloat, `WITHDRAW | ${memo||"No memo provided."}`];
                                 if (action() === "Withdrawal") {
                                     params = [res, accts.wallet.id, accts.bank.id, amtFloat, `DEPOSIT | ${memo||"No memo provided."}`];
@@ -170,7 +175,7 @@ module.exports = {
                     });
             }
             if (i.customId === `balance${Timestamp}` && i.user.id === interaction.user.id) {
-                const accts = await RetrieveData.userBasicAccounts(interaction, i.member);
+           
                 const embed = new EmbedBuilder()
                     .setTitle(`${i.member.displayName}'s Balance`)
                     .setDescription(

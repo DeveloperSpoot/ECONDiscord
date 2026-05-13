@@ -46,14 +46,22 @@ const {Client, Collection, GatewayIntentBits, Partials, InteractionType, Webhook
     ButtonStyle, ActionRowBuilder, MessageFlags
 } = require("discord.js");
 const {Guilds, DiscordUsers, GuildMembers, ModalAccounts} = require("./dataCrusher/models/Modals");
-const {RetrieveData, UpdateData, UserHQ} = require("./dataCrusher/Headquarters");
+const {RetrieveData, UpdateData, UserHQ, Snapml} = require("./dataCrusher/Headquarters");
 const {activeCleanUp, preimumCache} = require("./dataCrusher/Headquarters").CacheManager;
 const Entanglement = require("./dataCrusher/services/entanglement")
 
 const {ErrorEmbed} = require("./utils/embedUtil");
 const {serverJoin, serverLeave} = require("./dataCrusher/services/notify");
 const {request} = require("undici");
-require("dotenv").config();
+
+(async ()=>{
+    try{
+        await Snapml.open();
+        console.log("SnapMl loaded successfully.")
+    }catch(err){
+        console.log("SnapMl ran into an error:", err)
+    }
+})()
 
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], partials: [Partials.Channel]});
 
