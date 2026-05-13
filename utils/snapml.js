@@ -34,6 +34,11 @@ Snapml.prototype = {
      * @returns image buffer
      */
     getATM: async function(username, bankBalance, walletBalance){
+
+        if(!this.browser || !this.browser.isConnected() || !this.page || page.isClosed()){
+            await this.open();
+        }
+
         //Create a new html page from the template, and inject the values into the page.
         newATM = atmHTML
             .replace("{{atmImg}}", atmImg) //Inject the atm image into the page.
