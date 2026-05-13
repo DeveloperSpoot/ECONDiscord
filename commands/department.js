@@ -1124,16 +1124,16 @@ module.exports = {
           })
           .then(async (selection) => {
             if (selection.customId === "permSelector") {
-              rolebindError = await Department.addRoleBind(role, selection.values);
+               await Department.addRoleBind(role, selection.values);
 
-              if(rolebindError){
-                return await ErrorEmbed(
-                interaction,
-                err.message,
-                false,
-                false
-              );
-              }
+              // if(rolebindError){
+              //   return await ErrorEmbed(
+              //   interaction,
+              //   rolebindError.message,
+              //   false,
+              //   false
+              // );
+              // }
               const embed = await SimpleEmbed(
                 interaction,
                 "Role Binded Successfully!",
