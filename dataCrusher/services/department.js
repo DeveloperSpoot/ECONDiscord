@@ -543,7 +543,7 @@ Department.prototype = {
                 }
             });
 
-        if (foundBind && await foundBind?.permissions.find(v=> v === "Department-Head")){
+        if (await foundBind?.permissions.find(v=> v === "Department-Head")){
             violaton ="The Department Head Role cannot be removed. This role may not be edited through role-bind commands."
               throw new Error(violaton)
         }
