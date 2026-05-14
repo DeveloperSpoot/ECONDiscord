@@ -79,6 +79,14 @@ module.exports = {
                         return "Withdrawal";
                     }
                 };
+
+                const actionBalance = ()=>{
+                    if (i.customId === `deposit${Timestamp}`) {
+                        return "Wallet Balance: "+Number(accts.wallet.balance).toLocaleString("en-US");
+                    } else {
+                        return "Bank Balance: "+Number(accts.bank.balance).toLocaleString("en-US");
+                    }
+                };
                 //prompt the user to enter the amount they would like to deposit in the form of a modal
                 const depositModal = new ModalBuilder()
                     .setCustomId(`depositModal${Timestamp}`)
@@ -87,7 +95,7 @@ module.exports = {
                 const depositAmtInput = new TextInputBuilder()
                     .setCustomId(`depositAmtInput${Timestamp}`)
                     .setLabel(`Please Enter ${action()} Amount`)
-                    .setPlaceholder("0.00")
+                    .setPlaceholder(actionBalance())
                     .setRequired(true)
                     .setStyle(TextInputStyle.Short);
 
