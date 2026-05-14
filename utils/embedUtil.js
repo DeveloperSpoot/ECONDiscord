@@ -27,7 +27,8 @@ exports.SimpleEmbed = async function (interaction, title, description, color, fi
 }
 
 exports.ErrorEmbed = async function (interaction, description, emp, sendtoUser) {
-    if(emp === null){emp = false}
+    if(emp === true){emp = discord.MessageFlags.Ephemeral}
+    if(emp === false){emp = null}
     if(sendtoUser === null){sendtoUser = false}
     const embed = new discord.EmbedBuilder()
         .setTitle('Error')
@@ -52,7 +53,7 @@ exports.ErrorEmbed = async function (interaction, description, emp, sendtoUser) 
 
     if (interaction.isRepliable()) {
 
-            return await interaction.reply({embeds: [embed], ephemeral: emp});
+            return await interaction.reply({embeds: [embed], flags: emp});
 
     }
 }

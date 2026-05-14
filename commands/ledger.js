@@ -21,7 +21,7 @@ module.exports = {
 
         switch(interaction.options.getSubcommand()){
             case 'business-ledger': {
-                await interaction.deferReply({ ephemeral:true});
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                 if (await activeBusiness.get(`${interaction.IDENT}-${interaction.user.id}`) == null) {
                     return await ErrorEmbed(interaction, "Please select a business first by using /set business!");
                 }
@@ -38,7 +38,7 @@ module.exports = {
                 break;
             }
             case 'personal-ledger': {
-                await interaction.deferReply({ ephemeral:true});
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                 const userAccounts = await RetrieveData.userBasicAccounts(interaction, interaction.member);
 
                 const ADVbankLedger = await RetrieveData.advAccountLedger(interaction, userAccounts.bank.IDENT);
@@ -61,7 +61,7 @@ module.exports = {
                 break;
             }
             case 'department': {
-                await interaction.deferReply({ ephemeral:true});
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                 if (await activeDepartment.get(`${interaction.IDENT}-${interaction.user.id}`) == null) {
                     return await ErrorEmbed(interaction, "Please select a department first by using /set department!");
                 }
@@ -83,7 +83,7 @@ module.exports = {
                         "You are not authorized to manage the Treasury."
                     );
                 }
-                await interaction.deferReply({ ephemeral:true});
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                 const ledgerData = await RetrieveData.advAccountLedger(interaction, interaction.IDENT)
                 const LedgerDep = await LedgerGenerator(interaction,`TREASURY | ${interaction.IDENT}`, ledgerData)
 
@@ -100,7 +100,7 @@ module.exports = {
                         "You are not authorized to manage the Treasury and thus not authorized to perform this action.."
                     );
                 }
-                await interaction.deferReply({ ephemeral:true});
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral});
                 const UserToLedger = await interaction.options.getUser('user');
                 UserToLedger.guild = {};
                 UserToLedger.guild.id = interaction.IDENT

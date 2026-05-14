@@ -497,7 +497,7 @@ module.exports = {
 
         switch (interaction.options.getSubcommand()) {
             case 'clock': {
-                await interaction.deferReply({ ephemeral: false });
+                await interaction.deferReply();
                 const guildManager = new GuildHQ(interaction);
                 const ispremium = await guildManager.getPremiumStatus();
                 const promoEmbed = await currentPromotion(ispremium);
@@ -644,7 +644,7 @@ module.exports = {
                     .setColor("Orange")
 
                 interaction.editReply({ embeds: [processEmebed] })
-                interaction.editReply({ embeds: [], files: [csvAttachment], ephemeral: false })
+                interaction.editReply({ embeds: [], files: [csvAttachment]})
             }
                 break
 

@@ -42,10 +42,10 @@ module.exports = {
         const ispremium = await guildManager.getPremiumStatus();
 
         if(ispremium){
-            await interaction.reply({embeds: [embed], ephemeral: false});
+            await interaction.reply({embeds: [embed]});
         }else{
             const promoEmbed = await currentPromotion(ispremium);
-            await interaction.reply({embeds: [embed, promoEmbed], ephemeral: false});
+            await interaction.reply({embeds: [embed, promoEmbed]});
         }
 
 
