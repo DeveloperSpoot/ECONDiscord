@@ -372,7 +372,7 @@ module.exports = {
       subCmd
         .setName("buy-item")
         .setDescription(
-          "Used by members to buy items from businesses marked as self-served."
+          "Used by members to buy items from businesses marked as self-served; paid using bank funds."
         )
         .addStringOption((stringOp) =>
           stringOp
@@ -690,7 +690,7 @@ module.exports = {
             if (customerAccounts.bank.balance < priceAT.total) {
               return ErrorEmbed(
                 interaction,
-                `Insufficient Funds. You do not have enough to purchase these items. Total With Tax: ${await guildManager.formatMoney(
+                `Insufficient Funds. You do not have enough to purchase these items; ensure you have enough in your bank. Total With Tax: ${await guildManager.formatMoney(
                   priceAT.total
                 )}`
               );
