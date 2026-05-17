@@ -1,6 +1,7 @@
 const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, MessageFlags} = require("discord.js");
 const {RetrieveData, BusinessHQ, CreateData, UpdateData, UserHQ, GuildHQ} = require("../dataCrusher/Headquarters.js");
 const { ErrorEmbed } = require("../utils/embedUtil.js");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 const MoneyFormat = new Intl.NumberFormat('en-us', {currency: 'USD', style: 'currency'})
 module.exports = {
@@ -105,7 +106,8 @@ module.exports = {
                     text: `${interaction.guild.name} Economy System`, iconURL: interaction.guild.iconURL(),
                 });
 
-                interaction.editReply({embeds: [SusEmebed]});
+                await interaction.editReply({embeds: [SusEmebed]});
+                await LogGeneral(interaction, 'Green', 'Fine Paid', `<@${interaction.user.id}> paid a fine.`, {name: 'Amount', value: await guildManager.formatMoney(citationPromise.amount), inline: true}).catch(console.error);
             }break
         }
     },

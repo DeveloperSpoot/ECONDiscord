@@ -4,6 +4,7 @@ const { ErrorEmbed } = require("../utils/embedUtil");
 const { UserHQ, RetrieveData, DepartmentHQ, BusinessHQ, GuildHQ, SalaryHQ } = require("../dataCrusher/Headquarters");
 const IRS = require("../dataCrusher/services/irs");
 const { parseBrackets, calcTax } = require("../utils/taxBrackets");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -271,6 +272,10 @@ module.exports = {
             text: previewOnly ? "Preview only." : anyPaid ? "Payout complete." : "Nothing collected."
         });
 
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+
+        if (anyPaid && !previewOnly) {
+            await LogGeneral(interaction, 'Green', 'Income Collected', `<@${interaction.user.id}> collected income.`, {name: 'Total Gross', value: await guildManager.formatMoney(totalGross), inline: true}, {name: 'Tax Withheld', value: await guildManager.formatMoney(totalTax), inline: true}, {name: 'Net Received', value: await guildManager.formatMoney(totalNet), inline: true}).catch(console.error);
+        }
     }
 };

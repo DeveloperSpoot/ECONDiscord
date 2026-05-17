@@ -5,6 +5,7 @@ const { ErrorEmbed } = require("../utils/embedUtil.js");
 const {activeDepartment, activeBusiness} = require("../dataCrusher/services/cache");
 
 const {DepartmentHQ, NotificationHQ, PermManager} = require("../dataCrusher/Headquarters");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 const {csvGenerator} = require("../utils/csvGenerator");
 const {SimpleEmbed} = require("../utils/embedUtil");
@@ -274,7 +275,11 @@ module.exports = {
                             .setColor('Green')
                             .setThumbnail("https://media.tenor.com/AWKzZ19awFYAAAAi/checkmark-transparent.gif")
                             .setDescription("CSV Payroll File Processed\n"+EmbedDesc)
-                        return  interaction.editReply({embeds: [awaitEmbed]})
+                        await interaction.editReply({embeds: [awaitEmbed]})
+                        const busPayrollName = await (new BusinessHQ(interaction, EntityIDENT)).getName();
+                        const busPayrollTotal = results.reduce((sum, r) => sum + Number(r.paycheckAmount || 0), 0);
+                        await LogGeneral(interaction, 'Green', 'Payroll Executed', `<@${interaction.user.id}> executed payroll.`, {name: 'Entity', value: busPayrollName, inline: true}, {name: 'Total Paid', value: MoneyFormat.format(busPayrollTotal), inline: true}).catch(console.error);
+                        return;
 
                     }break
                     case 'department': {
@@ -316,7 +321,11 @@ module.exports = {
                             .setColor('Green')
                             .setThumbnail("https://media.tenor.com/AWKzZ19awFYAAAAi/checkmark-transparent.gif")
                             .setDescription("CSV Payroll File Processed\n"+EmbedDesc)
-                        return  interaction.editReply({embeds: [awaitEmbed]})
+                        await interaction.editReply({embeds: [awaitEmbed]})
+                        const depPayrollName = await Department.getName();
+                        const depPayrollTotal = results.reduce((sum, r) => sum + Number(r.paycheckAmount || 0), 0);
+                        await LogGeneral(interaction, 'Green', 'Payroll Executed', `<@${interaction.user.id}> executed payroll.`, {name: 'Entity', value: depPayrollName, inline: true}, {name: 'Total Paid', value: MoneyFormat.format(depPayrollTotal), inline: true}).catch(console.error);
+                        return;
                     }break
                 }
             }break

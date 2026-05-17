@@ -4,6 +4,7 @@ const {
     Interaction, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, SlashCommandBuilder,
     Colors, ButtonStyle, TextInputStyle
 } = require("discord.js");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -145,16 +146,18 @@ module.exports = {
                                                 iconURL: interaction.guild.iconURL(),
                                             });
                                         CreateData.basicTransaction.apply(this, params).then(
-                                            (newTrans) => {
+                                            async (newTrans) => {
                                                 if (!newTrans) {
                                                     return res.followUp(
                                                         "Transaction Failed Due To Internal Error."
                                                     );
                                                 }
-                                                res.followUp({
+                                                await res.followUp({
                                                     embeds: [depSuccess],
                                                     components: [],
                                                 });
+                                                const logTitle = action() === "Withdrawal" ? "Withdrawal" : "Deposit";
+                                                await LogGeneral(interaction, 'Blue', logTitle, `<@${interaction.user.id}> ${action() === "Withdrawal" ? "withdrew" : "deposited"} funds.`, {name: 'Amount', value: await guildManager.formatMoney(amtFloat), inline: true}).catch(console.error);
                                             }
                                         );
                                     }

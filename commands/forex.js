@@ -4,6 +4,7 @@ const { ErrorEmbed } = require("../utils/embedUtil");
 const { GuildHQ, RetrieveData } = require("../dataCrusher/Headquarters");
 const { getGuildStrength } = require("../dataCrusher/services/forexService");
 const { convertCurrency, ALPHA, BETA } = require("../utils/forexStrength");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -250,7 +251,9 @@ module.exports = {
                 .setDescription(`Exchanged into **${targetGuild.name}**`)
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'FOREX Exchange', `<@${interaction.user.id}> exchanged currency.`, {name: 'Sent', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Received', value: received.toFixed(2), inline: true}, {name: 'Rate', value: rate.toFixed(6), inline: true}, {name: 'Target Server', value: targetGuild.name, inline: true}).catch(console.error);
+            return;
         }
     }
 };

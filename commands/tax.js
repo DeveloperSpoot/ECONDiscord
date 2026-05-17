@@ -3,6 +3,7 @@ const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { GuildHQ } = require("../dataCrusher/Headquarters");
 const { parseBrackets, calcTax } = require("../utils/taxBrackets");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -68,7 +69,9 @@ module.exports = {
                 .addFields({ name: "Brackets", value: bracketSummary })
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Green', 'Income Tax Brackets Set', `Income tax brackets updated by <@${interaction.user.id}>.`, {name: 'Brackets', value: bracketSummary}).catch(console.error);
+            return;
         }
 
         // ── VAT: sweep all business accounts ──────────────────────────────────
@@ -218,6 +221,14 @@ module.exports = {
             .setFooter({ text: previewOnly ? "Preview only — no balances were changed." : "Tax collection complete." })
             .setTimestamp();
 
-        return interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+
+        if (!previewOnly && results.length > 0) {
+            if (taxType === 'pex') {
+                await LogGeneral(interaction, 'Orange', 'PEX Tax Applied', `PEX sweep by <@${interaction.user.id}>.`, {name: 'Members Taxed', value: String(results.length), inline: true}, {name: 'Total Collected', value: await guildManager.formatMoney(totalCollected), inline: true}).catch(console.error);
+            } else {
+                await LogGeneral(interaction, 'Orange', 'VAT Applied', `VAT sweep by <@${interaction.user.id}>.`, {name: 'Businesses Taxed', value: String(results.length), inline: true}, {name: 'Total Collected', value: await guildManager.formatMoney(totalCollected), inline: true}).catch(console.error);
+            }
+        }
     }
 };

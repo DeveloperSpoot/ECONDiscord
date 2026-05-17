@@ -205,3 +205,4 @@ Guild.prototype = {
 }
 
 module.exports = Guild;
+module.exports.LogGeneral = LogGeneral;

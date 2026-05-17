@@ -27,6 +27,7 @@ const {
 } = require("../dataCrusher/Headquarters");
 const discord = require("discord.js");
 const { csvGenerator } = require("../utils/csvGenerator");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("dep")
@@ -786,7 +787,8 @@ module.exports = {
           SusEmebed.setDescription(
             `Successfully issued fine under \`\`${await Department.getName()}\`\`.`
           ).setColor("Green");
-          interaction.editReply({ embeds: [SusEmebed] });
+          await interaction.editReply({ embeds: [SusEmebed] });
+          await LogGeneral(interaction, 'Orange', 'Fine Issued', `<@${interaction.user.id}> issued a fine to <@${Member.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Reason', value: character, inline: true}).catch(console.error);
         }
         break;
       case "balance":
@@ -887,7 +889,8 @@ module.exports = {
                 interaction.options.getNumber("amount")
               )} using Department funds.`
             );
-          interaction.editReply({ embeds: [Emebed] });
+          await interaction.editReply({ embeds: [Emebed] });
+          await LogGeneral(interaction, 'Green', 'Department Payment', `Department paid a member.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Recipient', value: `<@${interaction.options.getUser("user").id}>`, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
         }
         break;
       case "pay-business":
@@ -954,7 +957,8 @@ module.exports = {
                 interaction.options.getNumber("amount")
               )} using Department funds.`
             );
-          interaction.editReply({ embeds: [Emebed] });
+          await interaction.editReply({ embeds: [Emebed] });
+          await LogGeneral(interaction, 'Green', 'Department Payment', `Department paid a business.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Business', value: bName, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
         }
         break;
       case "pay-department":

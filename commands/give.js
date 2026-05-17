@@ -1,6 +1,7 @@
 const {RetrieveData, CreateData, UpdateData,GuildHQ,RevenueService} = require("../dataCrusher/Headquarters.js");
 const {Interaction, SlashCommandBuilder, EmbedBuilder, Colors, MessageFlags} = require("discord.js");
 const {NotificationHQ, BusinessHQ} = require("../dataCrusher/Headquarters");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -137,9 +138,10 @@ module.exports = {
                             interaction.options.getString("memo")
                         );
                         if(Transaction.amount >= 5000) { await NotificationHQ.flagNotification(interaction, Transaction);}
+                        const User = interaction.options.getMember("user");
                         await interaction.reply({embeds: [embed], flags: MessageFlags.Ephemeral}).catch(e => console.log(e));
-                        await interaction.options
-                            .getMember("user")
+                        await LogGeneral(interaction, 'Green', 'Funds Issued', `<@${interaction.user.id}> issued funds to <@${User.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
+                        await User
                             .send(
                                 `${giver.displayName} gave you ${await guildManager.formatMoney(
                                     interaction.options.getNumber("amount")
@@ -150,7 +152,7 @@ module.exports = {
                             .catch(async (e) =>
                                 interaction.channel.send(
                                     `<@${
-                                        interaction.options.getMember("user").id
+                                        User.id
                                     }>, you have your DMs off for this server, which is why we are pinging you! \n > ${
                                         giver.displayName
                                     } gave you ${await guildManager.formatMoney(
@@ -192,10 +194,12 @@ module.exports = {
                     return
                 }
 
+                const businessName = await business.getName();
                 susEmbed.setTitle("Transaction Completed")
                 susEmbed.setDescription(`Successfully paid the business ${await guildManager.formatMoney(amount)}`);
 
-                interaction.editReply({embeds: [susEmbed]})
+                await interaction.editReply({embeds: [susEmbed]})
+                await LogGeneral(interaction, 'Green', 'Funds Issued', `<@${interaction.user.id}> issued funds to ${businessName}.`, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}).catch(console.error);
                 break
             }
         }

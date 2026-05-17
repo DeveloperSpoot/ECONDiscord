@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { RetrieveData, GuildHQ, DepartmentHQ, BusinessHQ, PermManager } = require("../dataCrusher/Headquarters");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -211,7 +212,7 @@ module.exports = {
                 memo: `TRANSFER | <@${interaction.user.id}> → <@${targetUser.id}> | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: `<@${interaction.user.id}>`, inline: true },
@@ -220,6 +221,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `<@${interaction.user.id}> made a transfer.`, {name: 'From', value: `<@${interaction.user.id}>`, inline: true}, {name: 'To', value: `<@${targetUser.id}>`, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── member-to-treasury ─────────────────────────────────────────────────
@@ -255,7 +258,7 @@ module.exports = {
                 memo: `TRANSFER | <@${interaction.user.id}> → Treasury | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: `<@${interaction.user.id}>`, inline: true },
@@ -264,6 +267,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `<@${interaction.user.id}> made a transfer.`, {name: 'From', value: `<@${interaction.user.id}>`, inline: true}, {name: 'To', value: 'Treasury', inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── member-to-department ───────────────────────────────────────────────
@@ -306,7 +311,7 @@ module.exports = {
                 memo: `TRANSFER | <@${interaction.user.id}> → ${dep.name} | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: `<@${interaction.user.id}>`, inline: true },
@@ -315,6 +320,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `<@${interaction.user.id}> made a transfer.`, {name: 'From', value: `<@${interaction.user.id}>`, inline: true}, {name: 'To', value: dep.name, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── department-to-treasury ─────────────────────────────────────────────
@@ -360,7 +367,7 @@ module.exports = {
                 memo: `TRANSFER | ${dep.name} → Treasury | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: dep.name, inline: true },
@@ -369,6 +376,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `${dep.name} made a transfer.`, {name: 'From', value: dep.name, inline: true}, {name: 'To', value: 'Treasury', inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── business-to-treasury ───────────────────────────────────────────────
@@ -414,7 +423,7 @@ module.exports = {
                 memo: `TRANSFER | ${busAccount.name} → Treasury | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: busAccount.name, inline: true },
@@ -423,6 +432,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `${busAccount.name} made a transfer.`, {name: 'From', value: busAccount.name, inline: true}, {name: 'To', value: 'Treasury', inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── business-to-department ─────────────────────────────────────────────
@@ -474,7 +485,7 @@ module.exports = {
                 memo: `TRANSFER | ${busAccount.name} → ${dep.name} | ${memo}`
             }).catch(console.error);
 
-            return interaction.editReply({
+            await interaction.editReply({
                 embeds: [new EmbedBuilder().setColor("Green").setTitle("Transfer Complete")
                     .addFields(
                         { name: "From", value: busAccount.name, inline: true },
@@ -483,6 +494,8 @@ module.exports = {
                         { name: "Memo", value: memo, inline: false }
                     ).setTimestamp()]
             });
+            await LogGeneral(interaction, 'Green', 'Transfer', `${busAccount.name} made a transfer.`, {name: 'From', value: busAccount.name, inline: true}, {name: 'To', value: dep.name, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
     }
 };

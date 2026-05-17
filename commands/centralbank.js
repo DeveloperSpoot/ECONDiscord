@@ -5,6 +5,7 @@ const { GuildHQ, RetrieveData, NotificationHQ, CreateData, PermManager } = requi
 const { getGuildStrength } = require("../dataCrusher/services/forexService");
 const { convertCurrency, ALPHA, BETA } = require("../utils/forexStrength");
 const { Op } = require("sequelize");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -169,13 +170,15 @@ module.exports = {
                     });
                 });
 
-                return interaction.editReply({
+                await interaction.editReply({
                     embeds: [new EmbedBuilder()
                         .setColor("Green")
                         .setTitle("CB Authorization Granted")
                         .setDescription(`<@${user.id}> can now manage the Central Bank.`)
                         .setTimestamp()]
                 });
+                await LogGeneral(interaction, 'Green', 'CB Authorization Granted', `<@${interaction.user.id}> granted CB access to <@${user.id}>.`).catch(console.error);
+                return;
             }
 
             if (sub === "authorize remove") {
@@ -187,13 +190,15 @@ module.exports = {
                 }
                 await PermManager.CentralBank.deauthorize(interaction, user);
 
-                return interaction.editReply({
+                await interaction.editReply({
                     embeds: [new EmbedBuilder()
                         .setColor("Green")
                         .setTitle("CB Authorization Removed")
                         .setDescription(`<@${user.id}>'s Central Bank authorization has been removed.`)
                         .setTimestamp()]
                 });
+                await LogGeneral(interaction, 'Orange', 'CB Authorization Removed', `<@${interaction.user.id}> removed CB access from <@${user.id}>.`).catch(console.error);
+                return;
             }
         }
 
@@ -310,7 +315,9 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Orange', 'Money Printed', `<@${interaction.user.id}> printed money.`, {name: 'Amount Printed', value: await guildManager.formatMoney(amount), inline: true}, {name: 'CB Balance After', value: await guildManager.formatMoney(newCbBalance), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── report ────────────────────────────────────────────────────────────
@@ -418,7 +425,9 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Red', 'Money Destroyed', `<@${interaction.user.id}> destroyed money.`, {name: 'Amount Destroyed', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── transfer ──────────────────────────────────────────────────────────
@@ -484,7 +493,9 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'CB Transfer', `<@${interaction.user.id}> transferred CB funds.`, {name: 'From', value: fromLabel, inline: true}, {name: 'To', value: toLabel, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Memo', value: memo, inline: false}).catch(console.error);
+            return;
         }
 
         // ── reserves view ─────────────────────────────────────────────────────
@@ -598,7 +609,9 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'CB Reserves Purchased', `<@${interaction.user.id}> purchased foreign reserves.`, {name: 'Foreign Server', value: foreignGuild.name, inline: true}, {name: 'Spent', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Units Received', value: foreignUnits.toFixed(4), inline: true}).catch(console.error);
+            return;
         }
 
         // ── reserves sell ─────────────────────────────────────────────────────
@@ -670,7 +683,9 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'CB Reserves Sold', `<@${interaction.user.id}> sold foreign reserves.`, {name: 'Foreign Server', value: foreignName, inline: true}, {name: 'Units Sold', value: amount.toFixed(4), inline: true}, {name: 'Received', value: await guildManager.formatMoney(domesticReceived), inline: true}).catch(console.error);
+            return;
         }
     }
 };

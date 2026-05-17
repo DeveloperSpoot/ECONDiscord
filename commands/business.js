@@ -15,6 +15,7 @@ const {BusinessHQ, PermManager, UserHQ, NotificationHQ, DepartmentHQ, GuildHQ} =
 const discord = require("discord.js");
 const Entanglement = require("../dataCrusher/services/entanglement");
 const { paginateUtil2 } = require("../utils/paginateUtil2.js");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 
 //OPTIMIZE: Perhaps create a sub-command handler, so you cna split the sub-commands bc this is terrible.
 module.exports = {
@@ -750,7 +751,8 @@ module.exports = {
               )
               .catch((err) => console.log(err));
 
-            interaction.editReply({ embeds: [customerDMEmbed] });
+            await interaction.editReply({ embeds: [customerDMEmbed] });
+            await LogGeneral(interaction, 'Green', 'Item Purchase', `<@${interaction.user.id}> purchased an item.`, {name: 'Business', value: busName, inline: true}, {name: 'Item', value: busItem.name, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(priceAT.total), inline: true}).catch(console.error);
           } catch (err) {
             console.log(err);
             return await ErrorEmbed(interaction, err.message, false, false);
@@ -1106,6 +1108,7 @@ module.exports = {
                   embeds: [saleTransactionEmbed],
                   components: [],
                 });
+                await LogGeneral(interaction, 'Green', 'Quick Sale', `<@${interaction.user.id}> sold items to <@${customer.id}>.`, {name: 'Business', value: busName, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(totalCost), inline: true}).catch(console.error);
               }
               break;
 
@@ -1166,6 +1169,7 @@ module.exports = {
                   embeds: [saleTransactionEmbed],
                   components: [],
                 });
+                await LogGeneral(interaction, 'Green', 'Quick Sale', `<@${interaction.user.id}> sold items to <@${customer.id}>.`, {name: 'Business', value: busName, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(totalCost), inline: true}).catch(console.error);
               }
               break;
           }

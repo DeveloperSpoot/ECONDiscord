@@ -3,6 +3,7 @@ const {ErrorEmbed} = require("../utils/embedUtil");
 const {UserHQ, UpdateData, RetrieveData, GuildHQ} = require("../dataCrusher/Headquarters");
 const discord = require("discord.js");
 const {currentPromotion} = require("../utils/PromotionUtil");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('stipend')
@@ -57,9 +58,12 @@ module.exports = {
                 .setDescription(`You have claimed a stipend of ${await guildManager.formatMoney(Treasury.stipend)}.`+ " You can claim again <t:"+ (Math.floor(Number((Date.now())+Number(Timeout))/1000)) + ":R>.")
 
             if(ispremium){
-                return interaction.editReply({embeds: [SucessfulEmebed]})
+                await interaction.editReply({embeds: [SucessfulEmebed]})
+            } else {
+                await interaction.editReply({embeds: [SucessfulEmebed, promoEmbed]})
             }
-            return interaction.editReply({embeds: [SucessfulEmebed, promoEmbed]})
+            await LogGeneral(interaction, 'Green', 'Stipend Claimed', `<@${interaction.user.id}> claimed their stipend.`, {name: 'Amount', value: await guildManager.formatMoney(Treasury.stipend), inline: true}).catch(console.error);
+            return;
         }
 
         const DeclineEmebed = new discord.EmbedBuilder()

@@ -3,6 +3,7 @@ const { ErrorEmbed } = require("../../utils/embedUtil");
 const SQL = require("../Server");
 const {irsCache, currencyCache} = require("./cache");
 const {colorEmbed} = require("../../customPackage/colorBar");
+const { LogGeneral } = require("./guild");
 
 async function LogActivity(interaction, color, title, description, ...fields){
     if(interaction.guildId !== interaction.IDENT){return;}
@@ -128,6 +129,7 @@ IRS.prototype = {
         });
 
         await LogActivity(this.interaction, "green", "Payroll Tax Paid", `${entityName} paid ${await formatMoney(Treasury.customCurrency, taxAmount)} in payroll tax.`)
+        await LogGeneral(this.interaction, 'Orange', 'Payroll Tax Collected', `${entityName} paid payroll tax.`, {name: 'Amount', value: await formatMoney(Treasury.customCurrency, taxAmount), inline: true}).catch(console.error);
     },
     fileSalesTax: async function(taxAmount, entity){
         let Treasury = await SQL.models.Guilds.findByPk(this.IDENT);
@@ -154,6 +156,7 @@ IRS.prototype = {
         });
 
         await LogActivity(this.interaction, "green", "Sales Tax Paid", `${entityName} paid ${await formatMoney(Treasury.customCurrency, taxAmount)} in sales tax.`)
+        await LogGeneral(this.interaction, 'Orange', 'Sales Tax Collected', `${entityName} paid sales tax.`, {name: 'Amount', value: await formatMoney(Treasury.customCurrency, taxAmount), inline: true}).catch(console.error);
     }
 }
 
