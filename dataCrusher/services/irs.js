@@ -128,8 +128,8 @@ IRS.prototype = {
             memo: String(`${entityName} Payroll Tax.`)
         });
 
-        await LogActivity(this.interaction, "green", "Payroll Tax Paid", `${entityName} paid ${await formatMoney(Treasury.customCurrency, taxAmount)} in payroll tax.`)
-        await LogGeneral(this.interaction, 'Orange', 'Payroll Tax Collected', `${entityName} paid payroll tax.`, {name: 'Amount', value: await formatMoney(Treasury.customCurrency, taxAmount), inline: true}).catch(console.error);
+        await LogActivity(this.interaction, "green", "Tax Collected", `${entityName} paid ${await formatMoney(Treasury.customCurrency, taxAmount)} in tax.`)
+        await LogGeneral(this.interaction, 'Orange', 'Tax Collected', `${entityName} → Treasury.`, {name: 'Amount', value: await formatMoney(Treasury.customCurrency, taxAmount), inline: true}).catch(console.error);
     },
     fileSalesTax: async function(taxAmount, entity){
         let Treasury = await SQL.models.Guilds.findByPk(this.IDENT);

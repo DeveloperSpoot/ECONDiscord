@@ -890,7 +890,7 @@ module.exports = {
               )} using Department funds.`
             );
           await interaction.editReply({ embeds: [Emebed] });
-          await LogGeneral(interaction, 'Green', 'Department Payment', `Department paid a member.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Recipient', value: `<@${interaction.options.getUser("user").id}>`, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
+          await LogGeneral(interaction, 'Green', 'Funds Sent', `Funds sent from department to member.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Recipient', value: `<@${interaction.options.getUser("user").id}>`, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
         }
         break;
       case "pay-business":
@@ -958,7 +958,7 @@ module.exports = {
               )} using Department funds.`
             );
           await interaction.editReply({ embeds: [Emebed] });
-          await LogGeneral(interaction, 'Green', 'Department Payment', `Department paid a business.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Business', value: bName, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
+          await LogGeneral(interaction, 'Green', 'Funds Sent', `Funds sent from department to business.`, {name: 'Department', value: await Department.getName(), inline: true}, {name: 'Business', value: bName, inline: true}, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
         }
         break;
       case "pay-department":
