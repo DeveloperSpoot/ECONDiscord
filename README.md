@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This current verison of ECON is stable, with some minor bugs. However, the code and overall design has transformed into spaghetti; So ECON is going be redone at some point in the future, with more features, with better code and better overall design. In the meantime please enjoy the current verison of ECON, make it yours or enjoy the hosted verison.
+
 # ECONDiscord
 An Economy Bot Developed By Roleplayers for Roleplayers. Developed by [@DeveloperSpoot](https://github.com/DeveloperSpoot), Visioned and Originally Designed By [@jcrump97](https://github.com/jcrump97).
 
