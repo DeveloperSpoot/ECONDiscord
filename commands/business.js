@@ -845,7 +845,7 @@ module.exports = {
             );
           }
 
-          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+          await interaction.deferReply({});
           const TS = new Date().getMilliseconds();
           const items = await business.getItems(true);
 
@@ -1951,7 +1951,7 @@ module.exports = {
 
           const customer = interaction.options.getMember("member");
           let quantity = interaction.options.getNumber("quantity") || 1;
-          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+          await interaction.deferReply({});
           const customerAccounts = await RetrieveData.userBasicAccounts(
             interaction,
             customer

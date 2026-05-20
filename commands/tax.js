@@ -37,7 +37,7 @@ module.exports = {
             return ErrorEmbed(interaction, "This command can only be used inside a server.");
         }
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({});
 
         const taxType = interaction.options.getString("type");
         const bracketsStr = interaction.options.getString("brackets");

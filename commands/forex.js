@@ -56,7 +56,7 @@ module.exports = {
 
         // ── /forex strength ───────────────────────────────────────────────────
         if (sub === "strength") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply({});
             const guildId = interaction.IDENT;
             const guildManager = new GuildHQ(interaction);
             const { M, V, E, C, strength } = await getGuildStrength(guildId);
@@ -79,7 +79,7 @@ module.exports = {
 
         // ── /forex rate ───────────────────────────────────────────────────────
         if (sub === "rate") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply({});
             const targetGuildId = interaction.options.getString("target-server");
             const homeGuildId = interaction.IDENT;
             const guildManager = new GuildHQ(interaction);
@@ -129,7 +129,7 @@ module.exports = {
 
         // ── /forex exchange ───────────────────────────────────────────────────
         if (sub === "exchange") {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction.deferReply({});
             const amount = interaction.options.getNumber("amount");
             const targetGuildId = interaction.options.getString("target-server");
             const homeGuildId = interaction.IDENT;

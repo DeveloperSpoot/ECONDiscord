@@ -90,7 +90,6 @@ module.exports = {
         if (!giverAccounts.wallet) {
             return interaction.reply({
                 content: "You do not have any accounts registered to the economy!",
-                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -110,7 +109,6 @@ module.exports = {
                         if (result === "Insufficient Funds") {
                             return interaction.reply({
                                 content: "You do not have enough money to give that amount!",
-                                flags: MessageFlags.Ephemeral,
                             });
                         }
                         const embed = new EmbedBuilder()
@@ -139,7 +137,7 @@ module.exports = {
                         );
                         if(Transaction.amount >= 5000) { await NotificationHQ.flagNotification(interaction, Transaction);}
                         const User = interaction.options.getMember("user");
-                        await interaction.reply({embeds: [embed], flags: MessageFlags.Ephemeral}).catch(e => console.log(e));
+                        await interaction.reply({embeds: [embed]}).catch(e => console.log(e));
                         await LogGeneral(interaction, 'Green', 'Funds Issued', `<@${interaction.user.id}> issued funds to <@${User.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
                         await User
                             .send(

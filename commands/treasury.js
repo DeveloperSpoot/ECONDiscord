@@ -1,4 +1,6 @@
 const { RetrieveData, CreateData, UpdateData, BusinessHQ } = require("../dataCrusher/Headquarters.js");
+const SQL = require("../dataCrusher/Server");
+const { LogGeneral } = require("../dataCrusher/services/guild");
 const {
     ActionRowBuilder,
     SelectMenuBuilder,
@@ -379,6 +381,35 @@ module.exports = {
 
         // Entanglement Commands (Kind of Cursed tbh - Spoot)
         .addSubcommandGroup(subGroup =>
+            subGroup.setName("bonds")
+                .setDescription("Issue and manage sovereign bonds.")
+                .addSubcommand(sub =>
+                    sub.setName("issue")
+                        .setDescription("Issue a new bond available for purchase.")
+                        .addNumberOption(opt =>
+                            opt.setName("face-value")
+                                .setDescription("Amount to repay at maturity.")
+                                .setRequired(true))
+                        .addNumberOption(opt =>
+                            opt.setName("yield")
+                                .setDescription("Annual yield rate as a decimal (e.g. 0.05 = 5%).")
+                                .setRequired(true))
+                        .addNumberOption(opt =>
+                            opt.setName("maturity-days")
+                                .setDescription("Days until the bond matures.")
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub.setName("list")
+                        .setDescription("List all bonds this server has issued."))
+                .addSubcommand(sub =>
+                    sub.setName("redeem")
+                        .setDescription("Redeem a matured bond, paying the holder face value.")
+                        .addStringOption(opt =>
+                            opt.setName("bond-id")
+                                .setDescription("The bond IDENT to redeem.")
+                                .setRequired(true))))
+
+        .addSubcommandGroup(subGroup =>
             subGroup.setName("entanglement")
                 .setDescription("Allows you add or join servers to entangle with, sharing one treasury, one economy.")
 
@@ -500,7 +531,7 @@ module.exports = {
         switch (interaction.options.getSubcommand()) {
             case 'add': {
 
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                await interaction.deferReply({});
                 let ETG = new EntanglementDrive(interaction);
 
                 let ETG_Embed = new EmbedBuilder()
@@ -1273,7 +1304,7 @@ module.exports = {
             case 'set-stipend': {
                 const Stipend = interaction.options.getNumber('stipend');
                 const Timeout = interaction.options.getNumber('timeout')
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                await interaction.deferReply({});
                 await UpdateData.treasuryStipend(interaction.IDENT, Stipend, Timeout).catch(async err => {
                     console.error(err);
                     await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)
@@ -1291,7 +1322,7 @@ module.exports = {
 
             case 'set-budget-timeout': {
                 const Timeout = interaction.options.getNumber('dep-timeout')
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                await interaction.deferReply({});
                 await UpdateData.treasuryBudgetTimeout(interaction.IDENT, Timeout).catch(async err => {
                     console.error(err);
                     await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)
@@ -1305,6 +1336,110 @@ module.exports = {
                     })
                     .setDescription(`The timeout for budget claiming has been updated to ${Timeout}.`);
                 interaction.editReply({ embeds: [SuccessEmbed] })
+            } break
+
+            case 'issue': {
+                await interaction.deferReply({});
+                if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+                    return ErrorEmbed(interaction, "You are not authorized to manage the Treasury.");
+                }
+                const faceValue = interaction.options.getNumber('face-value');
+                const yieldRate = interaction.options.getNumber('yield');
+                const maturityDays = interaction.options.getNumber('maturity-days');
+                if (faceValue <= 0 || yieldRate <= 0 || maturityDays <= 0) {
+                    return ErrorEmbed(interaction, "All values must be greater than zero.", false, false);
+                }
+                const purchasePrice = faceValue / (1 + yieldRate);
+                const bond = await SQL.models.TreasuryBonds.create({
+                    issuerGuild: interaction.IDENT,
+                    faceValue, purchasePrice, yieldRate, maturityDays,
+                    status: 'available'
+                });
+                const guildManager = new GuildHQ(interaction);
+                const embed = new discord.EmbedBuilder()
+                    .setTitle("Bond Issued")
+                    .setColor("Green")
+                    .addFields(
+                        { name: "Bond ID", value: bond.IDENT, inline: false },
+                        { name: "Face Value", value: await guildManager.formatMoney(faceValue), inline: true },
+                        { name: "Purchase Price", value: await guildManager.formatMoney(purchasePrice), inline: true },
+                        { name: "Yield", value: `${(yieldRate * 100).toFixed(2)}%`, inline: true },
+                        { name: "Maturity", value: `${maturityDays} days after purchase`, inline: true }
+                    )
+                    .setDescription("Bond is now available for purchase via `/bonds buy`.")
+                    .setTimestamp();
+                await interaction.editReply({ embeds: [embed] });
+                await LogGeneral(interaction, 'Orange', 'Bond Issued', `<@${interaction.user.id}> issued a treasury bond.`, { name: 'Face Value', value: await guildManager.formatMoney(faceValue), inline: true }, { name: 'Yield', value: `${(yieldRate * 100).toFixed(2)}%`, inline: true }).catch(console.error);
+            } break
+
+            case 'list': {
+                await interaction.deferReply({});
+                if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+                    return ErrorEmbed(interaction, "You are not authorized to manage the Treasury.");
+                }
+                const bonds = await SQL.models.TreasuryBonds.findAll({
+                    where: { issuerGuild: interaction.IDENT },
+                    order: [['createdAt', 'DESC']],
+                    raw: true
+                });
+                if (!bonds.length) {
+                    return interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Yellow").setDescription("No bonds have been issued yet.")] });
+                }
+                const guildManager = new GuildHQ(interaction);
+                const statusEmoji = { available: '🟡', active: '🟢', redeemed: '✅', defaulted: '🔴' };
+                let desc = '';
+                for (const b of bonds) {
+                    const maturesStr = b.maturesAt ? `<t:${Math.floor(new Date(b.maturesAt).getTime() / 1000)}:R>` : `${b.maturityDays}d after purchase`;
+                    desc += `${statusEmoji[b.status] ?? '•'} **${b.IDENT.slice(0, 8)}...** · Face: ${await guildManager.formatMoney(b.faceValue)} · Yield: ${(b.yieldRate * 100).toFixed(2)}% · Matures: ${maturesStr} · ${b.status}\n`;
+                }
+                return interaction.editReply({ embeds: [new discord.EmbedBuilder().setTitle(`${interaction.guild.name} — Bonds Issued`).setColor("Blue").setDescription(desc).setTimestamp()] });
+            } break
+
+            case 'redeem': {
+                await interaction.deferReply({});
+                if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+                    return ErrorEmbed(interaction, "You are not authorized to manage the Treasury.");
+                }
+                const bondId = interaction.options.getString('bond-id');
+                const bond = await SQL.models.TreasuryBonds.findOne({ where: { IDENT: bondId, issuerGuild: interaction.IDENT } });
+                if (!bond) return ErrorEmbed(interaction, "Bond not found.", false, false);
+                if (bond.status !== 'active') return ErrorEmbed(interaction, `Bond is not active (status: ${bond.status}).`, false, false);
+                if (new Date() < new Date(bond.maturesAt)) {
+                    return interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Red").setDescription(`Bond has not yet matured. Matures <t:${Math.floor(new Date(bond.maturesAt).getTime() / 1000)}:R>.`)] });
+                }
+                const guildRecord = await SQL.models.Guilds.findByPk(interaction.IDENT, { raw: true });
+                const faceValue = Number(bond.faceValue);
+                if (Number(guildRecord.balance) < faceValue) {
+                    await bond.update({ status: 'defaulted' });
+                    return interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Red").setTitle("Bond Defaulted").setDescription(`Treasury insufficient to cover ${faceValue}. Bond marked as defaulted.`)] });
+                }
+                // Pay holder
+                await SQL.models.Guilds.update({ balance: Number(guildRecord.balance) - faceValue }, { where: { IDENT: interaction.IDENT } });
+                if (bond.holderType === 'user' && bond.holderMember) {
+                    const holderAccount = await SQL.models.Accounts.findOne({ where: { owner: bond.holderMember, type: 'personal-bank' }, raw: true });
+                    if (holderAccount) {
+                        await SQL.models.Accounts.update({ balance: Number(holderAccount.balance) + faceValue }, { where: { IDENT: holderAccount.IDENT } });
+                    }
+                } else if (bond.holderType === 'cb' && bond.holderGuild) {
+                    await SQL.models.Guilds.update({ cbBalance: Number((await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true })).cbBalance) + faceValue }, { where: { IDENT: bond.holderGuild } });
+                    // Unwind ForexReserves
+                    const reserveRow = await SQL.models.ForexReserves.findOne({ where: { guild: bond.holderGuild, foreignGuild: interaction.IDENT } });
+                    if (reserveRow) {
+                        const newAmt = Number(reserveRow.amount) - Number(bond.purchasePrice);
+                        if (newAmt <= 0) await reserveRow.destroy();
+                        else await reserveRow.update({ amount: newAmt });
+                    }
+                }
+                await bond.update({ status: 'redeemed' });
+                await SQL.models.AdvTransactionLogs.create({
+                    guild: interaction.IDENT, amount: faceValue,
+                    creditAccount: interaction.IDENT, debitAccount: bond.holderGuild ?? bond.holderMember ?? interaction.IDENT,
+                    creditType: 'Treasury', debitType: bond.holderType === 'cb' ? 'Treasury' : 'Account',
+                    memo: `BOND REDEEMED | ${bondId}`
+                }).catch(console.error);
+                const guildManager = new GuildHQ(interaction);
+                await interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Bond Redeemed").addFields({ name: "Face Value Paid", value: await guildManager.formatMoney(faceValue), inline: true }).setTimestamp()] });
+                await LogGeneral(interaction, 'Green', 'Bond Redeemed', `Treasury bond redeemed.`, { name: 'Face Value', value: await guildManager.formatMoney(faceValue), inline: true }).catch(console.error);
             } break
         }
     }

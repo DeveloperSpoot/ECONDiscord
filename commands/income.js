@@ -30,7 +30,7 @@ module.exports = {
             return await ErrorEmbed(interaction, "This command can only be used inside a server.");
         }
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({});
 
         const filterType = interaction.options.getString("entity-type") ?? "all";
         const previewOnly = interaction.options.getBoolean("preview") ?? false;

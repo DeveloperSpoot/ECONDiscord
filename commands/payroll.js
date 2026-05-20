@@ -77,7 +77,7 @@ module.exports = {
 
         switch (interaction.options.getSubcommand()){
             case 'generate': {
-                await interaction.deferReply({flags: MessageFlags.Ephemeral});
+                await interaction.deferReply({});
 
                 const awaitEmbed = new EmbedBuilder()
                     .setTitle('Generating CSV Payroll File...')
@@ -110,7 +110,7 @@ module.exports = {
                             .setThumbnail("https://media.tenor.com/AWKzZ19awFYAAAAi/checkmark-transparent.gif")
 
                         interaction.editReply({embeds: [awaitEmbed]})
-                        interaction.followUp( {files: [csvAttachment], flags: MessageFlags.Ephemeral })
+                        interaction.followUp( {files: [csvAttachment] })
 
                     }break
                     case 'department': {
@@ -146,7 +146,7 @@ module.exports = {
                             .setThumbnail("https://media.tenor.com/AWKzZ19awFYAAAAi/checkmark-transparent.gif")
 
                         interaction.editReply({embeds: [awaitEmbed]})
-                        interaction.followUp( {files: [csvAttachment], flags: MessageFlags.Ephemeral })
+                        interaction.followUp( {files: [csvAttachment] })
                     }break
                 }
 

@@ -50,7 +50,14 @@ async function getGuildStrength(guildId) {
         where: { GuildIDENT: guildId }
     }) ?? 0;
     const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0) + Number(guildRecord?.cbBalance ?? 0);
+
+    // Units of this server's currency held as reserves by OTHER servers
+    // Self-holdings excluded (self-buy is blocked; defence uses sell+destroy chain)
+    const foreignHeldReserves = await SQL.models.ForexReserves.sum('amount', {
+        where: { foreignGuild: guildId, guild: { [Op.ne]: guildId } }
+    }) ?? 0;
+
+    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0) + Number(guildRecord?.cbBalance ?? 0) + Number(foreignHeldReserves);
 
     const strength = serverStrength(M, V, E, C);
 

@@ -123,7 +123,22 @@ module.exports = {
                         .addNumberOption(opt =>
                             opt.setName("amount")
                                 .setDescription("Amount of foreign currency to sell.")
-                                .setRequired(true)))),
+                                .setRequired(true))))
+
+        // bonds subcommand group
+        .addSubcommandGroup(group =>
+            group.setName("bonds")
+                .setDescription("Purchase and manage sovereign bonds as CB reserve assets.")
+                .addSubcommand(sub =>
+                    sub.setName("buy")
+                        .setDescription("Buy a sovereign bond as a CB reserve asset.")
+                        .addStringOption(opt =>
+                            opt.setName("bond-id")
+                                .setDescription("The bond IDENT to purchase.")
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub.setName("holdings")
+                        .setDescription("View all bonds held by this CB."))),
 
     async autocomplete(interaction) {
         const focused = interaction.options.getFocused();
@@ -542,6 +557,15 @@ module.exports = {
             const foreignGuildId = interaction.options.getString("foreign-server");
             const amount = interaction.options.getNumber("amount");
 
+            if (foreignGuildId === guildId) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
+                        "You cannot purchase reserves of your own currency.\n" +
+                        "To defend your currency: sell foreign reserves you hold to fund your CB, then use `/centralbank destroy` to reduce supply."
+                    )]
+                });
+            }
+
             if (amount <= 0) {
                 return interaction.editReply({
                     embeds: [new EmbedBuilder().setColor("Red").setDescription("Amount must be greater than zero.")]
@@ -686,6 +710,133 @@ module.exports = {
             await interaction.editReply({ embeds: [embed] });
             await LogGeneral(interaction, 'Blue', 'CB Reserves Sold', `<@${interaction.user.id}> sold foreign reserves.`, {name: 'Foreign Server', value: foreignName, inline: true}, {name: 'Units Sold', value: amount.toFixed(4), inline: true}, {name: 'Received', value: await guildManager.formatMoney(domesticReceived), inline: true}).catch(console.error);
             return;
+        }
+
+        // ── bonds buy ─────────────────────────────────────────────────────────
+        if (sub === "bonds buy") {
+            const bondId = interaction.options.getString("bond-id");
+
+            const bond = await SQL.models.TreasuryBonds.findOne({
+                where: { IDENT: bondId, status: "available" }
+            });
+
+            if (!bond) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Bond not found or no longer available.")]
+                });
+            }
+
+            if (bond.issuerGuild === guildId) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("A CB cannot purchase its own server's bonds as reserves.")]
+                });
+            }
+
+            const purchasePrice = Number(bond.purchasePrice);
+            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
+            if (Number(guildRecord.cbBalance) < purchasePrice) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient CB funds. Balance: ${await guildManager.formatMoney(guildRecord.cbBalance)} · Required: ${await guildManager.formatMoney(purchasePrice)}`)]
+                });
+            }
+
+            const now = new Date();
+            const maturesAt = new Date(now.getTime() + bond.maturityDays * 24 * 60 * 60 * 1000);
+
+            // Debit buyer CB
+            await SQL.models.Guilds.update(
+                { cbBalance: Number(guildRecord.cbBalance) - purchasePrice },
+                { where: { IDENT: guildId } }
+            );
+
+            // Credit issuer treasury
+            const issuerRecord = await SQL.models.Guilds.findByPk(bond.issuerGuild, { raw: true });
+            await SQL.models.Guilds.update(
+                { balance: Number(issuerRecord.balance) + purchasePrice },
+                { where: { IDENT: bond.issuerGuild } }
+            );
+
+            // Activate bond
+            await bond.update({
+                holderType: "cb",
+                holderGuild: guildId,
+                holderMember: null,
+                issuedAt: now,
+                maturesAt,
+                status: "active"
+            });
+
+            // Bond purchase counts as a reserve — upsert ForexReserves
+            const [reserveRow] = await SQL.models.ForexReserves.findOrCreate({
+                where: { guild: guildId, foreignGuild: bond.issuerGuild },
+                defaults: { guild: guildId, foreignGuild: bond.issuerGuild, amount: 0 }
+            });
+            await reserveRow.increment("amount", { by: purchasePrice });
+
+            await SQL.models.AdvTransactionLogs.create({
+                guild: guildId, amount: purchasePrice,
+                creditAccount: guildId, debitAccount: bond.issuerGuild,
+                creditType: "Treasury", debitType: "Treasury",
+                memo: `CB BOND PURCHASE | ${bond.IDENT}`
+            }).catch(console.error);
+            await SQL.models.AdvTransactionLogs.create({
+                guild: bond.issuerGuild, amount: purchasePrice,
+                creditAccount: guildId, debitAccount: bond.issuerGuild,
+                creditType: "Treasury", debitType: "Treasury",
+                memo: `CB BOND PURCHASE (incoming) | ${bond.IDENT}`
+            }).catch(console.error);
+
+            const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
+            const embed = new EmbedBuilder()
+                .setTitle("Bond Purchased — CB Reserve")
+                .setColor("Green")
+                .addFields(
+                    { name: "Issuer", value: issuerGuildObj?.name ?? bond.issuerGuild, inline: true },
+                    { name: "Paid", value: await guildManager.formatMoney(purchasePrice), inline: true },
+                    { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
+                    { name: "Yield", value: `${(bond.yieldRate * 100).toFixed(2)}%`, inline: true },
+                    { name: "Matures", value: `<t:${Math.floor(maturesAt.getTime() / 1000)}:R>`, inline: true },
+                    { name: "Reserve Effect", value: `+${await guildManager.formatMoney(purchasePrice)} in ${issuerGuildObj?.name ?? bond.issuerGuild}'s C_n`, inline: false }
+                )
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'CB Bond Purchased', `CB purchased bond from ${issuerGuildObj?.name ?? bond.issuerGuild}.`, { name: 'Paid', value: await guildManager.formatMoney(purchasePrice), inline: true }, { name: 'Face Value', value: await guildManager.formatMoney(bond.faceValue), inline: true }).catch(console.error);
+            return;
+        }
+
+        // ── bonds holdings ────────────────────────────────────────────────────
+        if (sub === "bonds holdings") {
+            const bonds = await SQL.models.TreasuryBonds.findAll({
+                where: { holderGuild: guildId, holderType: "cb" },
+                order: [["maturesAt", "ASC"]],
+                raw: true
+            });
+
+            if (!bonds.length) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Yellow").setDescription("This CB holds no bonds.")]
+                });
+            }
+
+            const statusEmoji = { available: "🟡", active: "🟢", redeemed: "✅", defaulted: "🔴" };
+            let desc = "";
+            let totalFaceValue = 0;
+            for (const b of bonds) {
+                const issuerGuild = interaction.client.guilds.cache.get(b.issuerGuild);
+                const maturesStr = b.maturesAt ? `<t:${Math.floor(new Date(b.maturesAt).getTime() / 1000)}:R>` : "—";
+                desc += `${statusEmoji[b.status] ?? "•"} **${b.IDENT.slice(0, 8)}...** · ${issuerGuild?.name ?? b.issuerGuild} · Face: ${Number(b.faceValue).toLocaleString()} · Paid: ${Number(b.purchasePrice).toFixed(2)} · Matures: ${maturesStr} · ${b.status}\n`;
+                if (b.status === "active") totalFaceValue += Number(b.faceValue);
+            }
+
+            return interaction.editReply({
+                embeds: [new EmbedBuilder()
+                    .setTitle(`${interaction.guild.name} CB — Bond Holdings`)
+                    .setColor("Blue")
+                    .setDescription(desc)
+                    .addFields({ name: "Total Face Value (active)", value: await guildManager.formatMoney(totalFaceValue), inline: true })
+                    .setTimestamp()]
+            });
         }
     }
 };

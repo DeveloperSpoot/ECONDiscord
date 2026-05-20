@@ -52,6 +52,6 @@ module.exports = {
             )
             .setFooter({ text: "Use preview:true with PEX and VAT to see the breakdown before collecting." });
 
-        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+        return interaction.reply({ embeds: [embed] });
     }
 };
