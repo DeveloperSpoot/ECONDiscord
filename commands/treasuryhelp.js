@@ -1,44 +1,28 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("treasuryhelp")
-        .setDescription("Treasury operational guide — commands for departments, businesses, payroll, taxes, and bonds."),
+        .setDescription("Treasury operational guide — departments, businesses, payroll, taxes, and bonds."),
 
     async execute(interaction) {
         const embeds = [];
 
         // ── 1. Overview & Core ────────────────────────────────────────────────
         embeds.push(new EmbedBuilder()
-            .setTitle("🏛️  Treasury — Overview & Core Commands")
+            .setTitle("🏛️  Treasury — Overview")
             .setColor("Gold")
-            .setDescription(
-                "The Treasury is the government's operational account. It funds departments, manages businesses, " +
-                "collects taxes, issues bonds, and controls the economy's starting conditions.\n\n" +
-                "**Access:** `/authorize add @user` (server owner only). Administrators always have access."
-            )
+            .setDescription("Government operational account. Funds departments, manages businesses, collects taxes, issues bonds.\n**Access:** `/authorize add @user` (owner only). Admins always have access.")
             .addFields(
+                { name: "📊  Info", value: "`/treasury balance` · `/treasury statistics`", inline: false },
                 {
-                    name: "📊  Information",
+                    name: "⚙️  Config",
                     value:
-                        "`/treasury balance` — View the treasury balance.\n" +
-                        "`/treasury statistics` — Full economic statistics snapshot.",
-                    inline: false
-                },
-                {
-                    name: "⚙️  Configuration",
-                    value:
-                        "`/treasury set-currency symbol:` — Change the currency symbol shown on all money displays.\n" +
-                        "`/treasury set-starting-balance amount:` — Set the balance new members receive on registration.\n" +
-                        "`/setlogchannel channel:` — Set one channel to receive ALL transaction and activity logs.\n" +
-                        "`/treasury clean-up` — Removes and liquidates accounts of members who left the server.",
-                    inline: false
-                },
-                {
-                    name: "💱  Price Inflation / Deflation",
-                    value:
-                        "`/treasury inflate percentage-amount:` — Raise all item prices by a percentage.\n" +
-                        "`/treasury deflate percentage-amount:` — Lower all item prices by a percentage.",
+                        "`/treasury set-currency symbol:` — Currency symbol.\n" +
+                        "`/treasury set-starting-balance amount:` — New member starting balance.\n" +
+                        "`/setlogchannel channel:` — Log channel for all transactions.\n" +
+                        "`/treasury clean-up` — Liquidate departed members' accounts.\n" +
+                        "`/treasury inflate|deflate percentage-amount:` — Adjust all item prices.",
                     inline: false
                 }
             )
@@ -48,41 +32,31 @@ module.exports = {
         embeds.push(new EmbedBuilder()
             .setTitle("🏢  Departments")
             .setColor("Gold")
-            .setDescription(
-                "Departments are government branches (e.g. Police, Ministry of Finance). " +
-                "Each has its own balance, budget, roles, and payroll."
-            )
             .addFields(
                 {
                     name: "📋  Setup",
                     value:
-                        "`/treasury add-department name: head-role: member-role: description: budget: max-balance:` — Create a department.\n" +
-                        "`/treasury remove-department department:` — Dissolve a department (balance returned to treasury).\n" +
-                        "`/treasury edit-department department: [name] [head-role] [member-role] [description] [budget] [max-balance]` — Edit any department field.",
+                        "`/treasury add-department name: head-role: member-role: description: budget: max-balance:`\n" +
+                        "`/treasury remove-department department:` · `/treasury edit-department department: [fields...]`",
                     inline: false
                 },
                 {
                     name: "💰  Funding",
                     value:
-                        "`/treasury fund-department department: amount:` — Transfer treasury funds into a department's balance.\n" +
-                        "`/treasury set-budget-timeout dep-timeout:` — Set how often departments can claim their budget (in days).\n" +
-                        "`/transfer department-to-treasury department: amount:` — Return department funds to treasury (requires dept management).",
+                        "`/treasury fund-department department: amount:` — Treasury → department.\n" +
+                        "`/treasury set-budget-timeout dep-timeout:` — Budget claim cooldown (days).\n" +
+                        "`/transfer department-to-treasury department: amount:` — Return funds to treasury.",
                     inline: false
                 },
                 {
-                    name: "👥  Paying From a Department",
+                    name: "👥  Payments",
                     value:
-                        "`/dep pay pay-member user: amount: [reason]` — Send funds from the department to a member's bank.\n" +
-                        "`/dep pay pay-business business: amount: [reason]` — Send funds to a business account.\n" +
-                        "`/dep pay pay-department department: amount: [reason]` — Send funds to another department.",
+                        "`/dep pay pay-member user: amount:` · `/dep pay pay-business business: amount:` · `/dep pay pay-department department: amount:`",
                     inline: false
                 },
                 {
                     name: "🔍  Fines & Fees",
-                    value:
-                        "`/treasury view-fines` — List all unpaid fines issued by departments.\n" +
-                        "`/treasury view-fees` — List issued fees.\n" +
-                        "`/treasury dismiss-fine fine:` — Cancel a fine without collection.",
+                    value: "`/treasury view-fines` · `/treasury view-fees` · `/treasury dismiss-fine fine:`",
                     inline: false
                 }
             )
@@ -92,34 +66,25 @@ module.exports = {
         embeds.push(new EmbedBuilder()
             .setTitle("🏪  Businesses")
             .setColor("Gold")
-            .setDescription(
-                "Businesses are registered private entities in the economy. " +
-                "They have their own accounts, employees, items, and payroll."
-            )
             .addFields(
                 {
                     name: "📋  Setup",
                     value:
-                        "`/treasury add-business name: owner: description: selfserved: role:` — Register a new business.\n" +
-                        "`/treasury remove-business business:` — Deregister a business.\n" +
-                        "`/treasury edit-business business: [name] [description] [owner] [selfserved] [role]` — Edit business fields.",
+                        "`/treasury add-business name: owner: description: selfserved: role:`\n" +
+                        "`/treasury remove-business business:` · `/treasury edit-business business: [fields...]`",
                     inline: false
                 },
                 {
-                    name: "💳  Transfers",
+                    name: "💳  Payments & Transfers",
                     value:
-                        "`/bus pay pay-member user: amount:` — Pay a member from the business (subject to payroll tax).\n" +
+                        "`/bus pay pay-member user: amount:` — Pay member (payroll tax applies).\n" +
                         "`/bus pay pay-business business: amount:` — Pay another business.\n" +
-                        "`/transfer business-to-treasury business: amount:` — Return business funds to treasury (requires manager).\n" +
-                        "`/transfer business-to-department business: department: amount:` — Send from business to department.",
+                        "`/transfer business-to-treasury|department business: [department:] amount:`",
                     inline: false
                 },
                 {
-                    name: "🛒  Items & Sales",
-                    value:
-                        "Items are managed via `/bus item` commands (add, edit, remove).\n" +
-                        "Members buy with `/buy` or `/bus quick-sell` (counter-side sale).\n" +
-                        "Sales are subject to sales tax if configured.",
+                    name: "🛒  Items",
+                    value: "Manage via `/bus item add|edit|remove`. Members buy with `/buy` or `/bus quick-sell`. Sales tax applies if set.",
                     inline: false
                 }
             )
@@ -130,24 +95,17 @@ module.exports = {
             .setTitle("💵  Payroll, Salaries & Stipends")
             .setColor("Gold")
             .addFields(
+                { name: "Payroll", value: "`/payroll execute` — Batch pay all employees. Subject to payroll tax.", inline: false },
                 {
-                    name: "Payroll (manual batch)",
+                    name: "Salary",
                     value:
-                        "`/payroll execute` — Run payroll for your active business or department. Pays all employees their set wage in one command. Subject to payroll tax.",
+                        "`/salary set entity: user: amount: period-days:` — Recurring salary for a member or role.\n" +
+                        "`/collect-income` — Members collect unpaid cycles. Income tax applied automatically.",
                     inline: false
                 },
                 {
-                    name: "Salary (automatic, periodic)",
-                    value:
-                        "`/salary set entity: user: amount: period-days:` — Configure an automatic salary for a member or role, paid periodically.\n" +
-                        "`/collect-income` — Members run this to collect any unpaid salary cycles from all entities they're paid by. Income tax brackets are applied automatically at collection.",
-                    inline: false
-                },
-                {
-                    name: "Stipend (government UBI)",
-                    value:
-                        "`/treasury set-stipend stipend: timeout:` — Set a universal stipend amount and cooldown (in hours) that any registered member can claim.\n" +
-                        "`/stipend` — Members claim their stipend.",
+                    name: "Stipend",
+                    value: "`/treasury set-stipend stipend: timeout:` — Universal claimable amount + cooldown.\n`/stipend` — Members claim.",
                     inline: false
                 }
             )
@@ -157,80 +115,45 @@ module.exports = {
         embeds.push(new EmbedBuilder()
             .setTitle("🧾  Taxation")
             .setColor("Gold")
-            .setDescription("There are four tax types. All are collected automatically at point of event.")
             .addFields(
+                { name: "🏦  Sales Tax", value: "`/treasury tax-service set-sales-tax type: value:` — Flat or % on item purchases.", inline: true },
+                { name: "📋  Payroll Tax", value: "`/treasury tax-service set-payroll-tax type: value:` — Flat or % on wages paid.", inline: true },
                 {
-                    name: "🏦  Sales Tax",
+                    name: "💵  Income Tax",
                     value:
-                        "`/treasury tax-service set-sales-tax type: value:` — Set a flat or percentage tax applied to all item purchases.\n" +
-                        "Collected automatically at point of sale and sent to treasury.",
+                        "`/tax type:Income brackets:` — Set progressive brackets, applied at `/collect-income`.\n" +
+                        "Format: `50000:10,100000:20,30` → 10% up to $50k, 20% up to $100k, 30% above.",
                     inline: false
                 },
-                {
-                    name: "📋  Payroll Tax",
-                    value:
-                        "`/treasury tax-service set-payroll-tax type: value:` — Set a flat or percentage tax applied when businesses/departments pay members.\n" +
-                        "Deducted from the payer (not the recipient) and sent to treasury.",
-                    inline: false
-                },
-                {
-                    name: "💵  Income Tax (bracket)",
-                    value:
-                        "`/tax type:Income brackets:` — Store progressive income tax brackets server-wide.\n" +
-                        "Applied automatically when members use `/collect-income`. Members pay tax on gross salary before receiving net.\n" +
-                        "**Bracket format:** `50000:10,100000:20,30` → first $50k @ 10%, next $50k @ 20%, above $100k @ 30%.",
-                    inline: false
-                },
-                {
-                    name: "🏛️  PEX — Wealth Tax",
-                    value:
-                        "`/tax type:PEX brackets: [target-role] [preview:true]` — Progressive bracket tax sweep on all member **bank** balances.\n" +
-                        "Omit `target-role` to sweep all registered members. Use `preview:true` to see impact before collecting.",
-                    inline: false
-                },
-                {
-                    name: "🧾  VAT — Business Tax",
-                    value:
-                        "`/tax type:VAT brackets: [preview:true]` — Progressive bracket tax sweep on all **business account** balances.\n" +
-                        "Always sweeps all businesses regardless of role filter.",
-                    inline: false
-                }
+                { name: "🏛️  PEX (Wealth)", value: "`/tax type:PEX brackets: [target-role] [preview:true]` — Sweep member bank balances.", inline: false },
+                { name: "🧾  VAT (Business)", value: "`/tax type:VAT brackets: [preview:true]` — Sweep all business accounts.", inline: false }
             )
         );
 
         // ── 6. Bonds ──────────────────────────────────────────────────────────
         embeds.push(new EmbedBuilder()
-            .setTitle("📜  Sovereign Bonds (Treasury Side)")
+            .setTitle("📜  Sovereign Bonds")
             .setColor("Gold")
-            .setDescription(
-                "The Treasury can issue bonds to raise funds. Buyers pay now, you repay more later. " +
-                "This creates foreign investment and diplomatic ties — bond holders want your economy stable."
-            )
             .addFields(
                 {
                     name: "📋  Commands",
                     value:
-                        "`/treasury bonds issue face-value: yield: maturity-days:` — List a bond for sale. No money moves until purchased.\n" +
-                        "`/treasury bonds list` — View all bonds this server has issued and their status.\n" +
-                        "`/treasury bonds redeem bond-id:` — Pay out a matured bond. Debits treasury, credits the holder.",
+                        "`/treasury bonds issue face-value: yield: maturity-days:` — List bond for sale.\n" +
+                        "`/treasury bonds list` — View issued bonds.\n" +
+                        "`/treasury bonds redeem bond-id:` — Pay out at maturity.",
                     inline: false
                 },
                 {
-                    name: "⚙️  How Bonds Work",
+                    name: "⚙️  How It Works",
                     value:
-                        "**Purchase price** = `faceValue / (1 + yieldRate)` — buyers pay less than face value.\n" +
-                        "**At maturity:** you pay face value back to the holder (they profit the difference).\n" +
-                        "**If you can't pay:** the bond is marked **defaulted** — visible to all holders. Reputational consequence.\n\n" +
-                        "Individual buyers use `/bonds buy`. Foreign CBs use `/centralbank bonds buy` (their purchase also inflates your C_n as a reserve).",
+                        "Purchase price = `faceValue / (1 + yield)`. Treasury receives price immediately; pays face value at maturity.\n" +
+                        "Default if unable to pay — visible to all holders.\n" +
+                        "Individual buyers: `/bonds buy`. CB buyers: `/centralbank bonds buy` (also inflates your C_n as reserve).",
                     inline: false
                 },
                 {
                     name: "📐  Example",
-                    value:
-                        "Issue: face value $10,000 · yield 5% · 30-day maturity\n" +
-                        "Purchase price: $10,000 / 1.05 = **$9,524**\n" +
-                        "Buyer pays $9,524 now → treasury receives $9,524 immediately.\n" +
-                        "After 30 days: treasury pays out **$10,000**. Buyer earns $476.",
+                    value: "Face $10,000 · yield 5% · 30d → price **$9,524**. Treasury gets $9,524 now, pays $10,000 at maturity.",
                     inline: false
                 }
             )
@@ -242,23 +165,20 @@ module.exports = {
             .setColor("Gold")
             .addFields(
                 {
-                    name: "Treasury Authorization",
-                    value:
-                        "`/authorize add user:@user` — Grant treasury access (server owner only).\n" +
-                        "`/authorize remove user:@user` — Revoke treasury access.\n\n" +
-                        "Authorized users can run all treasury commands. This is separate from CB authorization.",
+                    name: "Authorization",
+                    value: "`/authorize add|remove user:@user` — Grant/revoke treasury access (owner only). Separate from CB auth.",
                     inline: false
                 },
                 {
-                    name: "Entanglement (Shared Economy)",
+                    name: "Entanglement",
                     value:
-                        "`/treasury entanglement add` — Generate a one-time code to share with another server.\n" +
-                        "`/treasury entanglement join code:` — Join another server's economy (shares treasury and balances).\n" +
-                        "`/treasury entanglement disengage` — Sever entanglement, restoring this server's independent economy.",
+                        "`/treasury entanglement add` — Generate join code.\n" +
+                        "`/treasury entanglement join code:` — Share economy with another server.\n" +
+                        "`/treasury entanglement disengage` — Restore independent economy.",
                     inline: false
                 }
             )
-            .setFooter({ text: "Use /cbhelp for Central Bank operations · /taxhelp for tax bracket syntax · /help for member commands" })
+            .setFooter({ text: "/cbhelp — Central Bank · /taxhelp — bracket syntax · /help — member commands" })
         );
 
         return interaction.reply({ embeds });

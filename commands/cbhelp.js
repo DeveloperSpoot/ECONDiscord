@@ -91,14 +91,10 @@ module.exports = {
                 {
                     name: "🛡️  Currency Defence",
                     value:
-                        "If another server is holding large reserves of your currency, your C_n is inflated. To fight back:\n\n" +
-                        "**If you hold foreign reserves:**\n" +
-                        "1. `/centralbank reserves sell` your foreign holdings → CB balance increases.\n" +
-                        "2. `/centralbank destroy` those funds → C_n drops → your currency strengthens.\n\n" +
-                        "**If you have no reserves:**\n" +
-                        "1. Tax your citizens → funds flow to treasury → `/centralbank transfer Treasury→CB` → `/centralbank destroy`.\n" +
-                        "This has a real cost to your economy — the correct incentive to build reserves in advance.\n\n" +
-                        "**You cannot buy reserves of your own currency.** Use the sell+destroy chain instead.",
+                        "Your C_n is inflated if others hold your currency. Counter-strategy:\n\n" +
+                        "**With foreign reserves:** Sell them → cbBalance rises → `/centralbank destroy` → C_n drops.\n" +
+                        "**Without reserves:** Tax citizens → treasury → transfer to CB → destroy. Real economic cost — incentive to stockpile reserves early.\n\n" +
+                        "Self-reserve purchase is blocked. Use the sell+destroy chain.",
                     inline: false
                 }
             )
