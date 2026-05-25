@@ -219,25 +219,19 @@ module.exports = {
         }
     },
     authorizedUser: async function(interaction, user, type = 'treasury'){
-        try{
-            const User = await getGuildMember(user.id, interaction.IDENT)
-            const result = await SQL.models.AuthorizedUsers.create({
-                guild: interaction.IDENT,
-                id: User.IDENT,
-                type: type
-            }).catch(async err => {
-                console.error(err);
-                return await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false, true)
-            })
+        const User = await getGuildMember(user.id, interaction.IDENT);
+        if (!User) throw new Error('That user is not registered in this server\'s economy.');
 
-            await LogGeneral(interaction, 'Red', `User Authorized`, `<@${user.id}> has been Authorized to run Treasury Commands (This User Now Has ECON Admin perms for the server).`)
+        const result = await SQL.models.AuthorizedUsers.create({
+            guild: interaction.IDENT,
+            id: User.IDENT,
+            type: type
+        });
 
-            return result
-        }catch(err){
-            console.log(err)
-            await ErrorEmbed(interaction, err.message)
-        }
+        await LogGeneral(interaction, 'Red', 'User Authorized',
+            `<@${user.id}> has been Authorized to run Treasury Commands (This User Now Has ECON Admin perms for the server).`);
 
+        return result;
     },
     cbAuthorizedUser: async function(interaction, user){
         return this.authorizedUser(interaction, user, 'centralbank');

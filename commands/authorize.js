@@ -36,10 +36,14 @@ module.exports = {
 
         switch(interaction.options.getSubcommand()){
             case 'add': {
-                await CreateData.authorizedUser(interaction, User).catch(async err => {
+                try {
+                    await CreateData.authorizedUser(interaction, User);
+                } catch(err) {
                     console.error(err);
-                    return await ErrorEmbed(interaction, `An error occurred: ${err.message}`, false,true)
-                })
+                    return interaction.editReply({
+                        embeds: [new discord.EmbedBuilder().setColor(discord.Colors['Red']).setDescription(`Error: ${err.message}`)]
+                    });
+                }
 
                 const SucessfulEmebed = new discord.EmbedBuilder()
                     .setTitle(`Authorization Granted`,)
