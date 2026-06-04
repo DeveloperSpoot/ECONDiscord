@@ -1,11 +1,26 @@
 const cron = require('node-cron');
 const { EmbedBuilder } = require('discord.js');
-const { Op } = require('sequelize');
 const SQL = require('../Server');
 const { getGuildStrength } = require('./forexService');
 const { convertCurrency } = require('../../utils/forexStrength');
 
 const VALARIA_GUILD_ID = '1097636386133254177';
+
+const NAME_W = 22;
+const SYM_W  = 10;
+const RATE_W = 14;
+
+function makeTable(header, rows) {
+    const divider = '─'.repeat(NAME_W + SYM_W + RATE_W + 10);
+    return '```\n' + header + '\n' + divider + '\n' + rows.join('\n') + '\n```';
+}
+
+function tableRow(displayName, symbol, rate, extra = '') {
+    const name = displayName.slice(0, NAME_W - 1).padEnd(NAME_W);
+    const sym  = symbol.slice(0, SYM_W - 1).padEnd(SYM_W);
+    const amt  = rate.padEnd(RATE_W);
+    return name + sym + amt + extra;
+}
 
 async function runForexUpdate(client) {
     const valariaStats = await getGuildStrength(VALARIA_GUILD_ID);
@@ -14,65 +29,115 @@ async function runForexUpdate(client) {
         return;
     }
 
-    // Load all guild DB records for lastRate lookups
     const allGuildRecords = await SQL.models.Guilds.findAll({ raw: true });
     const guildRecordMap = Object.fromEntries(allGuildRecords.map(g => [g.IDENT, g]));
 
-    // Compute rate vs vollars for every Discord guild the bot is in
+    // Compute vollarsPerUnit for every Discord guild the bot is in
     const rateRows = [];
     const rateUpdates = [];
 
     for (const [guildId, discordGuild] of client.guilds.cache) {
         const stats = await getGuildStrength(guildId);
-        const currentRate = stats.strength > 0
+        const vollarsPerUnit = stats.strength > 0
             ? convertCurrency(1, stats.strength, valariaStats.strength)
             : 0;
+        const perVollar = vollarsPerUnit > 0 ? (1 / vollarsPerUnit) : 0;
 
         const guildRecord = guildRecordMap[guildId];
         const lastRate = guildRecord?.forexLastRate != null ? Number(guildRecord.forexLastRate) : null;
 
         let changeStr;
         if (guildId === VALARIA_GUILD_ID) {
-            changeStr = '*(reference)*';
+            changeStr = 'ref';
         } else if (lastRate === null || lastRate <= 0) {
-            changeStr = '*New*';
+            changeStr = 'NEW';
         } else {
-            const pct = ((currentRate - lastRate) / lastRate) * 100;
-            if (Math.abs(pct) < 0.001) changeStr = '±0.00%';
-            else if (pct > 0) changeStr = `▲ +${pct.toFixed(2)}%`;
-            else changeStr = `▼ ${pct.toFixed(2)}%`;
+            const pct = ((vollarsPerUnit - lastRate) / lastRate) * 100;
+            if (Math.abs(pct) < 0.001) changeStr = '+0.00%';
+            else if (pct > 0) changeStr = `+${pct.toFixed(2)}%`;
+            else changeStr = `${pct.toFixed(2)}%`;
         }
 
-        rateRows.push({ name: discordGuild.name, rate: currentRate, changeStr, isValaria: guildId === VALARIA_GUILD_ID });
-        rateUpdates.push({ IDENT: guildId, newRate: currentRate });
+        rateRows.push({
+            guildId,
+            name: discordGuild.name,
+            symbol: guildRecord?.customCurrency || '$',
+            vollarsPerUnit,
+            perVollar,
+            changeStr,
+            isValaria: guildId === VALARIA_GUILD_ID
+        });
+        rateUpdates.push({ IDENT: guildId, newRate: vollarsPerUnit });
     }
 
     // Valaria at top, rest sorted strongest first
     rateRows.sort((a, b) => {
         if (a.isValaria) return -1;
         if (b.isValaria) return 1;
-        return b.rate - a.rate;
+        return b.vollarsPerUnit - a.vollarsPerUnit;
     });
 
-    const lines = rateRows.map(r =>
-        `${r.isValaria ? '🏗️' : '🔹'} **${r.name}** — \`${r.rate.toFixed(6)}\` vollars  ${r.changeStr}`
-    ).join('\n');
+    // ── Embed 1: all currencies vs vollars ───────────────────────────────────
+    const vollarHeader = 'SERVER'.padEnd(NAME_W) + 'CURRENCY'.padEnd(SYM_W) + 'PER VOLLAR'.padEnd(RATE_W) + '24H';
+    const vollarRows = rateRows.map(r =>
+        tableRow(
+            r.isValaria ? `${r.name} (ref)` : r.name,
+            r.symbol,
+            r.perVollar.toFixed(6),
+            r.changeStr
+        )
+    );
 
-    const embed = new EmbedBuilder()
-        .setTitle('📊 Daily FOREX — All Currencies vs Vollars')
+    const embed1 = new EmbedBuilder()
+        .setTitle('📊 Daily FOREX — Currencies per Vollar')
         .setColor('Blue')
-        .setDescription(lines)
+        .setDescription(
+            '-# *PER VOLLAR = how much of each currency 1 vollar buys. A higher number means the vollar is stronger against that currency.*\n' +
+            makeTable(vollarHeader, vollarRows)
+        )
         .setTimestamp()
-        .setFooter({ text: 'Sorted by strength · Valaria is reference · Updates daily at midnight UTC' });
+        .setFooter({ text: 'Sorted by strength · Updates daily at midnight UTC' });
 
-    // Send to every configured channel
+    // ── Send to every configured channel ─────────────────────────────────────
     const channelGuilds = allGuildRecords.filter(g => g.forexUpdateChannel != null);
+
     for (const guildRecord of channelGuilds) {
         const discordGuild = client.guilds.cache.get(guildRecord.IDENT);
         if (!discordGuild) continue;
         const channel = await discordGuild.channels.fetch(guildRecord.forexUpdateChannel).catch(() => null);
         if (!channel) continue;
-        await channel.send({ embeds: [embed] }).catch(err =>
+
+        // Find this guild's row so we can compute home→other rates
+        const homeRow = rateRows.find(r => r.guildId === guildRecord.IDENT);
+        const homeVollars = homeRow?.vollarsPerUnit ?? 0;
+        const homeSymbol  = homeRow?.symbol ?? '$';
+
+        // ── Embed 2: 1 home currency vs every other currency ─────────────────
+        const convHeader = 'SERVER'.padEnd(NAME_W) + 'CURRENCY'.padEnd(SYM_W) + `1 ${homeSymbol} BUYS`.padEnd(RATE_W);
+        const convRows = rateRows.map(r => {
+            // 1 home unit = homeVollars vollars; 1 foreign unit = r.vollarsPerUnit vollars
+            // => home buys homeVollars / r.vollarsPerUnit foreign units
+            const amount = (homeVollars > 0 && r.vollarsPerUnit > 0)
+                ? (homeVollars / r.vollarsPerUnit).toFixed(6)
+                : '—';
+            return tableRow(
+                r.isValaria ? `${r.name} (ref)` : r.name,
+                r.symbol,
+                amount
+            );
+        });
+
+        const embed2 = new EmbedBuilder()
+            .setTitle(`💱 1 ${discordGuild.name} Currency Converts To`)
+            .setColor('Gold')
+            .setDescription(
+                `-# *How much of each other currency you receive in exchange for 1 unit of ${discordGuild.name}'s currency.*\n` +
+                makeTable(convHeader, convRows)
+            )
+            .setTimestamp()
+            .setFooter({ text: 'Use /forex exchange to convert · Updates daily at midnight UTC' });
+
+        await channel.send({ embeds: [embed1, embed2] }).catch(err =>
             console.error(`[ForexUpdate] Failed to send to ${discordGuild.name}:`, err.message)
         );
     }
