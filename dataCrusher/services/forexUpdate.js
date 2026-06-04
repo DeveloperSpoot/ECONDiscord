@@ -6,18 +6,26 @@ const { convertCurrency } = require('../../utils/forexStrength');
 
 const VALARIA_GUILD_ID = '1097636386133254177';
 
-const NAME_W = 22;
-const SYM_W  = 10;
-const RATE_W = 14;
+const NAME_W = 18;
+const SYM_W  = 7;
+const RATE_W = 11;
+
+// Strip Discord custom emoji (<:name:id> → name) and all non-ASCII (flag emoji etc.)
+function sanitize(str) {
+    return str
+        .replace(/<a?:(\w+):\d+>/g, '$1')
+        .replace(/[^\x00-\x7F]/g, '')
+        .trim();
+}
 
 function makeTable(header, rows) {
-    const divider = '─'.repeat(NAME_W + SYM_W + RATE_W + 10);
+    const divider = '─'.repeat(NAME_W + SYM_W + RATE_W + 8);
     return '```\n' + header + '\n' + divider + '\n' + rows.join('\n') + '\n```';
 }
 
 function tableRow(displayName, symbol, rate, extra = '') {
-    const name = displayName.slice(0, NAME_W - 1).padEnd(NAME_W);
-    const sym  = symbol.slice(0, SYM_W - 1).padEnd(SYM_W);
+    const name = sanitize(displayName).slice(0, NAME_W - 1).padEnd(NAME_W);
+    const sym  = sanitize(symbol).slice(0, SYM_W - 1).padEnd(SYM_W);
     const amt  = rate.padEnd(RATE_W);
     return name + sym + amt + extra;
 }
@@ -78,7 +86,7 @@ async function runForexUpdate(client) {
     });
 
     // ── Embed 1: all currencies vs vollars ───────────────────────────────────
-    const vollarHeader = 'SERVER'.padEnd(NAME_W) + 'CURRENCY'.padEnd(SYM_W) + 'PER VOLLAR'.padEnd(RATE_W) + '24H';
+    const vollarHeader = 'SERVER'.padEnd(NAME_W) + 'SYM'.padEnd(SYM_W) + 'PER VOLLAR'.padEnd(RATE_W) + '24H';
     const vollarRows = rateRows.map(r =>
         tableRow(
             r.isValaria ? `${r.name} (ref)` : r.name,
@@ -113,7 +121,7 @@ async function runForexUpdate(client) {
         const homeSymbol  = homeRow?.symbol ?? '$';
 
         // ── Embed 2: 1 home currency vs every other currency ─────────────────
-        const convHeader = 'SERVER'.padEnd(NAME_W) + 'CURRENCY'.padEnd(SYM_W) + `1 ${homeSymbol} BUYS`.padEnd(RATE_W);
+        const convHeader = 'SERVER'.padEnd(NAME_W) + 'SYM'.padEnd(SYM_W) + `1 ${sanitize(homeSymbol)} BUYS`.padEnd(RATE_W);
         const convRows = rateRows.map(r => {
             // 1 home unit = homeVollars vollars; 1 foreign unit = r.vollarsPerUnit vollars
             // => home buys homeVollars / r.vollarsPerUnit foreign units
