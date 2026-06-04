@@ -9,76 +9,79 @@ const VALARIA_GUILD_ID = '1097636386133254177';
 
 async function runForexUpdate(client) {
     const valariaStats = await getGuildStrength(VALARIA_GUILD_ID);
-    console.log(`[ForexUpdate] Valaria strength: ${valariaStats.strength}`);
     if (valariaStats.strength <= 0) {
         console.warn('[ForexUpdate] Valaria has zero strength — skipping run.');
         return;
     }
 
-    const guilds = await SQL.models.Guilds.findAll({
-        where: { forexUpdateChannel: { [Op.ne]: null } },
-        raw: true
-    });
-    console.log(`[ForexUpdate] Found ${guilds.length} guild(s) with forex channels:`, guilds.map(g => `${g.IDENT} → ch:${g.forexUpdateChannel}`));
+    // Load all guild DB records for lastRate lookups
+    const allGuildRecords = await SQL.models.Guilds.findAll({ raw: true });
+    const guildRecordMap = Object.fromEntries(allGuildRecords.map(g => [g.IDENT, g]));
 
-    for (const guildRecord of guilds) {
-        if (guildRecord.IDENT === VALARIA_GUILD_ID) { console.log(`[ForexUpdate] Skipping Valaria (${guildRecord.IDENT})`); continue; }
+    // Compute rate vs vollars for every Discord guild the bot is in
+    const rateRows = [];
+    const rateUpdates = [];
 
-        const discordGuild = client.guilds.cache.get(guildRecord.IDENT);
-        if (!discordGuild) { console.warn(`[ForexUpdate] Discord guild not found in cache for IDENT ${guildRecord.IDENT}`); continue; }
-
-        const channel = await discordGuild.channels.fetch(guildRecord.forexUpdateChannel).catch(err => { console.warn(`[ForexUpdate] Channel fetch failed:`, err.message); return null; });
-        if (!channel) continue;
-        console.log(`[ForexUpdate] Sending to ${discordGuild.name} → #${channel.name}`);
-
-        const homeStats = await getGuildStrength(guildRecord.IDENT);
-        const currentRate = homeStats.strength > 0
-            ? convertCurrency(1, homeStats.strength, valariaStats.strength)
+    for (const [guildId, discordGuild] of client.guilds.cache) {
+        const stats = await getGuildStrength(guildId);
+        const currentRate = stats.strength > 0
+            ? convertCurrency(1, stats.strength, valariaStats.strength)
             : 0;
 
-        const inverseRate = currentRate > 0 ? (1 / currentRate) : 0;
-        const lastRate = guildRecord.forexLastRate != null ? Number(guildRecord.forexLastRate) : null;
-        const currSymbol = guildRecord.customCurrency || '$';
+        const guildRecord = guildRecordMap[guildId];
+        const lastRate = guildRecord?.forexLastRate != null ? Number(guildRecord.forexLastRate) : null;
 
-        let changeText;
-        let embedColor;
-
-        if (lastRate === null || lastRate <= 0) {
-            changeText = 'First update — no comparison data yet.';
-            embedColor = 'Blue';
+        let changeStr;
+        if (guildId === VALARIA_GUILD_ID) {
+            changeStr = '*(reference)*';
+        } else if (lastRate === null || lastRate <= 0) {
+            changeStr = '*New*';
         } else {
-            const changePct = ((currentRate - lastRate) / lastRate) * 100;
-            if (Math.abs(changePct) < 0.001) {
-                changeText = '— No change';
-                embedColor = 'Blue';
-            } else if (changePct > 0) {
-                changeText = `▲ +${changePct.toFixed(2)}% vs yesterday`;
-                embedColor = 'Green';
-            } else {
-                changeText = `▼ ${changePct.toFixed(2)}% vs yesterday`;
-                embedColor = 'Red';
-            }
+            const pct = ((currentRate - lastRate) / lastRate) * 100;
+            if (Math.abs(pct) < 0.001) changeStr = '±0.00%';
+            else if (pct > 0) changeStr = `▲ +${pct.toFixed(2)}%`;
+            else changeStr = `▼ ${pct.toFixed(2)}%`;
         }
 
-        const embed = new EmbedBuilder()
-            .setTitle('📊 Daily FOREX Update')
-            .setColor(embedColor)
-            .setDescription(`Exchange rate between **${discordGuild.name}** and **Valaria** (vollars)`)
-            .addFields(
-                { name: `1 ${discordGuild.name} currency`, value: `${currentRate.toFixed(6)} vollars`, inline: true },
-                { name: '1 vollar', value: `${inverseRate.toFixed(6)} ${currSymbol}`, inline: true },
-                { name: '24h Change', value: changeText, inline: false }
-            )
-            .setTimestamp()
-            .setFooter({ text: 'FOREX Daily Update · Valaria' });
+        rateRows.push({ name: discordGuild.name, rate: currentRate, changeStr, isValaria: guildId === VALARIA_GUILD_ID });
+        rateUpdates.push({ IDENT: guildId, newRate: currentRate });
+    }
 
+    // Valaria at top, rest sorted strongest first
+    rateRows.sort((a, b) => {
+        if (a.isValaria) return -1;
+        if (b.isValaria) return 1;
+        return b.rate - a.rate;
+    });
+
+    const lines = rateRows.map(r =>
+        `${r.isValaria ? '🏗️' : '🔹'} **${r.name}** — \`${r.rate.toFixed(6)}\` vollars  ${r.changeStr}`
+    ).join('\n');
+
+    const embed = new EmbedBuilder()
+        .setTitle('📊 Daily FOREX — All Currencies vs Vollars')
+        .setColor('Blue')
+        .setDescription(lines)
+        .setTimestamp()
+        .setFooter({ text: 'Sorted by strength · Valaria is reference · Updates daily at midnight UTC' });
+
+    // Send to every configured channel
+    const channelGuilds = allGuildRecords.filter(g => g.forexUpdateChannel != null);
+    for (const guildRecord of channelGuilds) {
+        const discordGuild = client.guilds.cache.get(guildRecord.IDENT);
+        if (!discordGuild) continue;
+        const channel = await discordGuild.channels.fetch(guildRecord.forexUpdateChannel).catch(() => null);
+        if (!channel) continue;
         await channel.send({ embeds: [embed] }).catch(err =>
             console.error(`[ForexUpdate] Failed to send to ${discordGuild.name}:`, err.message)
         );
+    }
 
+    // Persist new rates for tomorrow's % change
+    for (const { IDENT, newRate } of rateUpdates) {
         await SQL.models.Guilds.update(
-            { forexLastRate: currentRate },
-            { where: { IDENT: guildRecord.IDENT } }
+            { forexLastRate: newRate },
+            { where: { IDENT } }
         );
     }
 }
