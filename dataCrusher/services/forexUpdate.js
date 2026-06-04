@@ -9,6 +9,7 @@ const VALARIA_GUILD_ID = '1097636386133254177';
 
 async function runForexUpdate(client) {
     const valariaStats = await getGuildStrength(VALARIA_GUILD_ID);
+    console.log(`[ForexUpdate] Valaria strength: ${valariaStats.strength}`);
     if (valariaStats.strength <= 0) {
         console.warn('[ForexUpdate] Valaria has zero strength — skipping run.');
         return;
@@ -18,15 +19,17 @@ async function runForexUpdate(client) {
         where: { forexUpdateChannel: { [Op.ne]: null } },
         raw: true
     });
+    console.log(`[ForexUpdate] Found ${guilds.length} guild(s) with forex channels:`, guilds.map(g => `${g.IDENT} → ch:${g.forexUpdateChannel}`));
 
     for (const guildRecord of guilds) {
-        if (guildRecord.IDENT === VALARIA_GUILD_ID) continue;
+        if (guildRecord.IDENT === VALARIA_GUILD_ID) { console.log(`[ForexUpdate] Skipping Valaria (${guildRecord.IDENT})`); continue; }
 
         const discordGuild = client.guilds.cache.get(guildRecord.IDENT);
-        if (!discordGuild) continue;
+        if (!discordGuild) { console.warn(`[ForexUpdate] Discord guild not found in cache for IDENT ${guildRecord.IDENT}`); continue; }
 
-        const channel = await discordGuild.channels.fetch(guildRecord.forexUpdateChannel).catch(() => null);
+        const channel = await discordGuild.channels.fetch(guildRecord.forexUpdateChannel).catch(err => { console.warn(`[ForexUpdate] Channel fetch failed:`, err.message); return null; });
         if (!channel) continue;
+        console.log(`[ForexUpdate] Sending to ${discordGuild.name} → #${channel.name}`);
 
         const homeStats = await getGuildStrength(guildRecord.IDENT);
         const currentRate = homeStats.strength > 0
