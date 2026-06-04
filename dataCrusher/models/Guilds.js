@@ -84,6 +84,16 @@ module.exports = DB.define("Guilds", {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
+    },
+    forexUpdateChannel: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null
+    },
+    forexLastRate: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     freezeTableName: true

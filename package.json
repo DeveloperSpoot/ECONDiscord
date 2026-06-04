@@ -8,6 +8,7 @@
     "dotenv": "^16.6.1",
     "firebase-admin": "^11.0.0",
     "keyv": "^4.3.3",
+    "node-cron": "^4.2.1",
     "node-fetch": "^2.7.0",
     "node-html-to-image": "^3.2.4",
     "pg": "^8.8.0",
