@@ -13,6 +13,8 @@ const { SimpleEmbed, ErrorEmbed } = require("../utils/embedUtil");
 const discord = require("discord.js");
 const { PermManager, DepartmentHQ, NotificationHQ, UserHQ, GuildHQ, EntanglementDrive } = require("../dataCrusher/Headquarters");
 const { csvGenerator } = require("../utils/csvGenerator");
+const { getGuildStrength } = require('../dataCrusher/services/forexService');
+const { convertCurrency } = require('../utils/forexStrength');
 const { activeCleanUp } = require("../dataCrusher/Headquarters").CacheManager;
 
 module.exports = {
@@ -1421,7 +1423,15 @@ module.exports = {
                         await SQL.models.Accounts.update({ balance: Number(holderAccount.balance) + faceValue }, { where: { IDENT: holderAccount.IDENT } });
                     }
                 } else if (bond.holderType === 'cb' && bond.holderGuild) {
-                    await SQL.models.Guilds.update({ cbBalance: Number((await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true })).cbBalance) + faceValue }, { where: { IDENT: bond.holderGuild } });
+                    const [issuerStats, holderStats] = await Promise.all([
+                        getGuildStrength(interaction.IDENT),
+                        getGuildStrength(bond.holderGuild)
+                    ]);
+                    const faceInHolder = (issuerStats.strength > 0 && holderStats.strength > 0)
+                        ? convertCurrency(faceValue, issuerStats.strength, holderStats.strength)
+                        : faceValue;
+                    const holderRecord = await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true });
+                    await SQL.models.Guilds.update({ cbBalance: Number(holderRecord.cbBalance) + faceInHolder }, { where: { IDENT: bond.holderGuild } });
                     // Unwind ForexReserves
                     const reserveRow = await SQL.models.ForexReserves.findOne({ where: { guild: bond.holderGuild, foreignGuild: interaction.IDENT } });
                     if (reserveRow) {

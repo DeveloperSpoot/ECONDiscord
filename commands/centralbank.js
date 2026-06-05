@@ -96,34 +96,10 @@ module.exports = {
         // reserves subcommand group
         .addSubcommandGroup(group =>
             group.setName("reserves")
-                .setDescription("Manage foreign currency reserves.")
+                .setDescription("View foreign currency reserve holdings.")
                 .addSubcommand(sub =>
                     sub.setName("view")
-                        .setDescription("View all foreign currency reserve holdings."))
-                .addSubcommand(sub =>
-                    sub.setName("buy")
-                        .setDescription("Buy foreign currency reserves from another server.")
-                        .addStringOption(opt =>
-                            opt.setName("foreign-server")
-                                .setDescription("Server whose currency to buy.")
-                                .setRequired(true)
-                                .setAutocomplete(true))
-                        .addNumberOption(opt =>
-                            opt.setName("amount")
-                                .setDescription("Amount of domestic currency to spend.")
-                                .setRequired(true)))
-                .addSubcommand(sub =>
-                    sub.setName("sell")
-                        .setDescription("Sell foreign currency reserves back to domestic treasury.")
-                        .addStringOption(opt =>
-                            opt.setName("foreign-server")
-                                .setDescription("Server whose currency to sell.")
-                                .setRequired(true)
-                                .setAutocomplete(true))
-                        .addNumberOption(opt =>
-                            opt.setName("amount")
-                                .setDescription("Amount of foreign currency to sell.")
-                                .setRequired(true))))
+                        .setDescription("View all foreign currency reserve holdings.")))
 
         // bonds subcommand group
         .addSubcommandGroup(group =>
@@ -552,166 +528,6 @@ module.exports = {
             return interaction.editReply({ embeds: [embed] });
         }
 
-        // ── reserves buy ──────────────────────────────────────────────────────
-        if (sub === "reserves buy") {
-            const foreignGuildId = interaction.options.getString("foreign-server");
-            const amount = interaction.options.getNumber("amount");
-
-            if (foreignGuildId === guildId) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
-                        "You cannot purchase reserves of your own currency.\n" +
-                        "To defend your currency: sell foreign reserves you hold to fund your CB, then use `/centralbank destroy` to reduce supply."
-                    )]
-                });
-            }
-
-            if (amount <= 0) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Amount must be greater than zero.")]
-                });
-            }
-
-            const foreignGuild = interaction.client.guilds.cache.get(foreignGuildId);
-            if (!foreignGuild) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("That server is not accessible to the bot.")]
-                });
-            }
-
-            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-            const cbBalance = Number(guildRecord?.cbBalance ?? 0);
-
-            if (cbBalance < amount) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient Central Bank funds. CB Balance: ${await guildManager.formatMoney(cbBalance)}`)]
-                });
-            }
-
-            const [homeStats, foreignStats] = await Promise.all([
-                getGuildStrength(guildId),
-                getGuildStrength(foreignGuildId)
-            ]);
-
-            if (homeStats.strength <= 0 || foreignStats.strength <= 0) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Exchange rate cannot be computed — one or both servers have zero strength.")]
-                });
-            }
-
-            const foreignUnits = convertCurrency(amount, homeStats.strength, foreignStats.strength);
-
-            await SQL.models.Guilds.update(
-                { cbBalance: cbBalance - amount },
-                { where: { IDENT: guildId } }
-            );
-
-            const [row] = await SQL.models.ForexReserves.findOrCreate({
-                where: { guild: guildId, foreignGuild: foreignGuildId },
-                defaults: { guild: guildId, foreignGuild: foreignGuildId, amount: 0 }
-            });
-            await row.increment("amount", { by: foreignUnits });
-
-            await SQL.models.AdvTransactionLogs.create({
-                guild: guildId,
-                amount: amount,
-                creditAccount: guildId,
-                debitAccount: guildId,
-                creditType: "Treasury",
-                debitType: "Treasury",
-                memo: `RESERVE BUY | ${foreignGuild.name} | ${foreignUnits.toFixed(4)} units`
-            }).catch(console.error);
-
-            const embed = new EmbedBuilder()
-                .setTitle("Reserves Purchased")
-                .setColor("Green")
-                .addFields(
-                    { name: "Spent (domestic)", value: await guildManager.formatMoney(amount), inline: true },
-                    { name: "Received (foreign units)", value: foreignUnits.toFixed(4), inline: true },
-                    { name: "Foreign Server", value: foreignGuild.name, inline: true },
-                    { name: "Rate", value: `1 domestic → ${(foreignUnits / amount).toFixed(6)} foreign`, inline: false }
-                )
-                .setTimestamp();
-
-            await interaction.editReply({ embeds: [embed] });
-            await LogGeneral(interaction, 'Blue', 'CB Reserves Purchased', `<@${interaction.user.id}> purchased foreign reserves.`, {name: 'Foreign Server', value: foreignGuild.name, inline: true}, {name: 'Spent', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Units Received', value: foreignUnits.toFixed(4), inline: true}).catch(console.error);
-            return;
-        }
-
-        // ── reserves sell ─────────────────────────────────────────────────────
-        if (sub === "reserves sell") {
-            const foreignGuildId = interaction.options.getString("foreign-server");
-            const amount = interaction.options.getNumber("amount");
-
-            if (amount <= 0) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Amount must be greater than zero.")]
-                });
-            }
-
-            const foreignGuild = interaction.client.guilds.cache.get(foreignGuildId);
-            const foreignName = foreignGuild?.name ?? foreignGuildId;
-
-            const reserveRow = await SQL.models.ForexReserves.findOne({
-                where: { guild: guildId, foreignGuild: foreignGuildId }
-            });
-
-            if (!reserveRow || Number(reserveRow.amount) < amount) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
-                        `Insufficient reserves for **${foreignName}**. ` +
-                        `Held: ${Number(reserveRow?.amount ?? 0).toFixed(4)} units.`
-                    )]
-                });
-            }
-
-            const [homeStats, foreignStats] = await Promise.all([
-                getGuildStrength(guildId),
-                getGuildStrength(foreignGuildId)
-            ]);
-
-            if (homeStats.strength <= 0 || foreignStats.strength <= 0) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Exchange rate cannot be computed — one or both servers have zero strength.")]
-                });
-            }
-
-            const domesticReceived = convertCurrency(amount, foreignStats.strength, homeStats.strength);
-
-            await reserveRow.decrement("amount", { by: amount });
-
-            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-            await SQL.models.Guilds.update(
-                { cbBalance: Number(guildRecord.cbBalance ?? 0) + domesticReceived },
-                { where: { IDENT: guildId } }
-            );
-
-            await SQL.models.AdvTransactionLogs.create({
-                guild: guildId,
-                amount: domesticReceived,
-                creditAccount: guildId,
-                debitAccount: guildId,
-                creditType: "Treasury",
-                debitType: "Treasury",
-                memo: `RESERVE SELL | ${foreignName} | ${amount} units`
-            }).catch(console.error);
-
-            const embed = new EmbedBuilder()
-                .setTitle("Reserves Sold")
-                .setColor("Green")
-                .addFields(
-                    { name: "Sold (foreign units)", value: amount.toFixed(4), inline: true },
-                    { name: "Received (domestic)", value: await guildManager.formatMoney(domesticReceived), inline: true },
-                    { name: "Foreign Server", value: foreignName, inline: true },
-                    { name: "Rate", value: `1 foreign → ${(domesticReceived / amount).toFixed(6)} domestic`, inline: false }
-                )
-                .setTimestamp();
-
-            await interaction.editReply({ embeds: [embed] });
-            await LogGeneral(interaction, 'Blue', 'CB Reserves Sold', `<@${interaction.user.id}> sold foreign reserves.`, {name: 'Foreign Server', value: foreignName, inline: true}, {name: 'Units Sold', value: amount.toFixed(4), inline: true}, {name: 'Received', value: await guildManager.formatMoney(domesticReceived), inline: true}).catch(console.error);
-            return;
-        }
-
         // ── bonds buy ─────────────────────────────────────────────────────────
         if (sub === "bonds buy") {
             const bondId = interaction.options.getString("bond-id");
@@ -732,24 +548,38 @@ module.exports = {
                 });
             }
 
-            const purchasePrice = Number(bond.purchasePrice);
-            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
-            if (Number(guildRecord.cbBalance) < purchasePrice) {
+            const purchasePrice = Number(bond.purchasePrice); // in issuer's currency
+
+            const [homeStats, issuerStats] = await Promise.all([
+                getGuildStrength(guildId),
+                getGuildStrength(bond.issuerGuild)
+            ]);
+
+            if (homeStats.strength <= 0 || issuerStats.strength <= 0) {
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient CB funds. Balance: ${await guildManager.formatMoney(guildRecord.cbBalance)} · Required: ${await guildManager.formatMoney(purchasePrice)}`)]
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Exchange rate cannot be computed — one or both servers have zero strength.")]
+                });
+            }
+
+            const costInHome = convertCurrency(purchasePrice, issuerStats.strength, homeStats.strength);
+
+            const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
+            if (Number(guildRecord.cbBalance) < costInHome) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient CB funds. Required: ${await guildManager.formatMoney(costInHome)} · CB Balance: ${await guildManager.formatMoney(guildRecord.cbBalance)}`)]
                 });
             }
 
             const now = new Date();
             const maturesAt = new Date(now.getTime() + bond.maturityDays * 24 * 60 * 60 * 1000);
 
-            // Debit buyer CB
+            // Debit buyer CB by costInHome (domestic currency)
             await SQL.models.Guilds.update(
-                { cbBalance: Number(guildRecord.cbBalance) - purchasePrice },
+                { cbBalance: Number(guildRecord.cbBalance) - costInHome },
                 { where: { IDENT: guildId } }
             );
 
-            // Credit issuer treasury
+            // Credit issuer treasury by purchasePrice (issuer's currency)
             const issuerRecord = await SQL.models.Guilds.findByPk(bond.issuerGuild, { raw: true });
             await SQL.models.Guilds.update(
                 { balance: Number(issuerRecord.balance) + purchasePrice },
@@ -774,7 +604,7 @@ module.exports = {
             await reserveRow.increment("amount", { by: purchasePrice });
 
             await SQL.models.AdvTransactionLogs.create({
-                guild: guildId, amount: purchasePrice,
+                guild: guildId, amount: costInHome,
                 creditAccount: guildId, debitAccount: bond.issuerGuild,
                 creditType: "Treasury", debitType: "Treasury",
                 memo: `CB BOND PURCHASE | ${bond.IDENT}`
@@ -787,21 +617,23 @@ module.exports = {
             }).catch(console.error);
 
             const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
+            const issuerCurrency = issuerRecord.customCurrency || '$';
             const embed = new EmbedBuilder()
                 .setTitle("Bond Purchased — CB Reserve")
                 .setColor("Green")
                 .addFields(
                     { name: "Issuer", value: issuerGuildObj?.name ?? bond.issuerGuild, inline: true },
-                    { name: "Paid", value: await guildManager.formatMoney(purchasePrice), inline: true },
-                    { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
+                    { name: "You Paid", value: await guildManager.formatMoney(costInHome), inline: true },
+                    { name: "Issuer Received", value: `${purchasePrice.toFixed(2)} ${issuerCurrency}`, inline: true },
+                    { name: "Face Value", value: `${Number(bond.faceValue).toFixed(2)} ${issuerCurrency}`, inline: true },
                     { name: "Yield", value: `${(bond.yieldRate * 100).toFixed(2)}%`, inline: true },
                     { name: "Matures", value: `<t:${Math.floor(maturesAt.getTime() / 1000)}:R>`, inline: true },
-                    { name: "Reserve Effect", value: `+${await guildManager.formatMoney(purchasePrice)} in ${issuerGuildObj?.name ?? bond.issuerGuild}'s C_n`, inline: false }
+                    { name: "Reserve Effect", value: `+${purchasePrice.toFixed(2)} ${issuerCurrency} in ${issuerGuildObj?.name ?? bond.issuerGuild}'s C_n`, inline: false }
                 )
                 .setTimestamp();
 
             await interaction.editReply({ embeds: [embed] });
-            await LogGeneral(interaction, 'Blue', 'CB Bond Purchased', `CB purchased bond from ${issuerGuildObj?.name ?? bond.issuerGuild}.`, { name: 'Paid', value: await guildManager.formatMoney(purchasePrice), inline: true }, { name: 'Face Value', value: await guildManager.formatMoney(bond.faceValue), inline: true }).catch(console.error);
+            await LogGeneral(interaction, 'Blue', 'CB Bond Purchased', `CB purchased bond from ${issuerGuildObj?.name ?? bond.issuerGuild}.`, { name: 'You Paid', value: await guildManager.formatMoney(costInHome), inline: true }, { name: 'Face Value', value: `${Number(bond.faceValue).toFixed(2)} ${issuerCurrency}`, inline: true }).catch(console.error);
             return;
         }
 

@@ -39,14 +39,14 @@ module.exports = {
                     value:
                         "`/centralbank destroy amount: memo:` — Permanently removes money from the CB balance and total circulation.\n" +
                         "**This is the primary tool for reducing C_n to defend your currency.** " +
-                        "The CB can only destroy what it holds — to destroy more, first fund the CB from treasury or sell foreign reserves.",
+                        "The CB can only destroy what it holds — to destroy more, first fund the CB via treasury transfer.",
                     inline: false
                 },
                 {
                     name: "↔️  Transfer",
                     value:
                         "`/centralbank transfer direction: amount: memo:` — Move funds between the CB and Treasury.\n" +
-                        "Directions: `Central Bank → Treasury` (deploy CB funds) or `Treasury → Central Bank` (fund the CB for destruction or reserve purchases).",
+                        "Directions: `Central Bank → Treasury` (deploy CB funds) or `Treasury → Central Bank` (fund the CB for destruction or bond purchases).",
                     inline: false
                 }
             )
@@ -57,16 +57,15 @@ module.exports = {
             .setTitle("🌐  Foreign Reserves")
             .setColor("Blue")
             .setDescription(
-                "Reserves are holdings of another server's currency. They are a key geopolitical tool — " +
-                "large reserve positions directly affect exchange rates."
+                "Reserves are holdings of another server's currency, accumulated **only through CB bond purchases**. " +
+                "Each bond you buy creates a reserve entry that inflates the issuer's C_n, weakening their currency. " +
+                "Reserves unwind automatically when the bond matures and is redeemed."
             )
             .addFields(
                 {
                     name: "📋  Commands",
                     value:
-                        "`/centralbank reserves view` — List all foreign currency holdings and current exchange rates.\n" +
-                        "`/centralbank reserves buy foreign-server: amount:` — Spend CB funds to acquire units of another server's currency.\n" +
-                        "`/centralbank reserves sell foreign-server: amount:` — Sell held reserves back, receiving domestic currency into the CB.",
+                        "`/centralbank reserves view` — List all foreign currency holdings and current exchange rates.",
                     inline: false
                 },
                 {
@@ -74,27 +73,17 @@ module.exports = {
                     value:
                         "Every unit of Server B's currency held by ANY other server counts toward Server B's **C_n** (total circulation).\n" +
                         "Since `S = activity / C_n`, a larger C_n means a weaker currency.\n\n" +
-                        "**Buying** Server B's reserves → inflates B's C_n → B's currency weakens.\n" +
-                        "**Holding** reserves sustains the pressure.\n" +
-                        "**Selling** reserves → deflates B's C_n → B's currency recovers.",
-                    inline: false
-                },
-                {
-                    name: "⚔️  Currency Attack",
-                    value:
-                        "1. Accumulate CB funds (print or receive bond proceeds).\n" +
-                        "2. `/centralbank reserves buy` large quantities of the target server's currency.\n" +
-                        "3. Hold them — the target's C_n stays inflated and their exchange rate stays weak.\n" +
-                        "4. Sell when you want to exit (you recover your funds at the then-current rate).",
+                        "**Holding bonds** sustains C_n pressure on the issuer until maturity.\n" +
+                        "**Bond maturity & redemption** unwinds the reserve, restoring their C_n.",
                     inline: false
                 },
                 {
                     name: "🛡️  Currency Defence",
                     value:
-                        "Your C_n is inflated if others hold your currency. Counter-strategy:\n\n" +
-                        "**With foreign reserves:** Sell them → cbBalance rises → `/centralbank destroy` → C_n drops.\n" +
-                        "**Without reserves:** Tax citizens → treasury → transfer to CB → destroy. Real economic cost — incentive to stockpile reserves early.\n\n" +
-                        "Self-reserve purchase is blocked. Use the sell+destroy chain.",
+                        "Your C_n is inflated if foreign CBs hold bonds you issued. Options:\n\n" +
+                        "Tax citizens → treasury → `/centralbank transfer` Treasury → CB → `/centralbank destroy` → C_n drops.\n\n" +
+                        "Reserve pressure from bond-holding CBs naturally unwinds when bonds mature. " +
+                        "Maintaining a healthy economy ensures issuers can redeem on schedule.",
                     inline: false
                 }
             )
@@ -120,20 +109,20 @@ module.exports = {
                 {
                     name: "⚙️  How CB Bond Purchases Work",
                     value:
-                        "When a CB buys a bond:\n" +
-                        "• CB pays `purchasePrice` from `cbBalance`\n" +
-                        "• Issuer's treasury receives `purchasePrice`\n" +
-                        "• A `ForexReserves` entry is created for `purchasePrice` — **this inflates the issuer's C_n**\n" +
-                        "• At maturity, the issuer pays back `faceValue` (which is greater than `purchasePrice`)\n" +
+                        "When your CB buys a bond from Server B:\n" +
+                        "• Your `cbBalance` decreases by `costInHome` — the purchase price **converted to your currency** at the live FOREX rate\n" +
+                        "• Server B's treasury receives `purchasePrice` in their own currency\n" +
+                        "• A `ForexReserves` entry is created — **Server B's C_n increases** (their currency weakens)\n" +
+                        "• At maturity, Server B pays back `faceValue`, **converted to your currency** at the then-current rate\n" +
                         "• The reserve position is unwound on redemption\n\n" +
                         "Bond IDs are found via `/bonds list` (public) or `/treasury bonds list` on the issuing server.",
                     inline: false
                 },
                 {
-                    name: "⚖️  Bond Strategy",
+                    name: "⚔️  Bond Strategy",
                     value:
-                        "**Offensive:** Buy bonds of a target server → inflates their C_n (weakens currency) AND earns yield.\n" +
-                        "**Cooperative:** Buy bonds of an ally → funds their economy + aligns your interests (you want them to repay, so you want their economy stable).\n" +
+                        "**Offensive:** Buy bonds of a target → inflates their C_n (weakens currency) AND earns yield. Hold until maturity for maximum pressure.\n" +
+                        "**Cooperative:** Buy bonds of an ally → funds their economy + aligns incentives (you want them stable so they can repay).\n" +
                         "**Risk:** If the issuer defaults, the reserve unwinds but you lose the face value premium.",
                     inline: false
                 }
