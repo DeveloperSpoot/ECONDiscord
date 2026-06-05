@@ -103,6 +103,7 @@ module.exports = {
                     name: "📋  Commands",
                     value:
                         "`/centralbank bonds buy bond-id:` — Purchase an available bond using CB funds. The bond is recorded as a reserve asset.\n" +
+                        "`/centralbank bonds transfer bond-id: to-guild:` — Transfer a CB-held bond to another server's CB. Free — no payment. ForexReserves pressure moves with it.\n" +
                         "`/centralbank bonds holdings` — View all bonds this CB holds, their maturity dates, and total face value.",
                     inline: false
                 },
@@ -123,6 +124,7 @@ module.exports = {
                     value:
                         "**Offensive:** Buy bonds of a target → inflates their C_n (weakens currency) AND earns yield. Hold until maturity for maximum pressure.\n" +
                         "**Cooperative:** Buy bonds of an ally → funds their economy + aligns incentives (you want them stable so they can repay).\n" +
+                        "**Diplomatic transfer:** Use `/centralbank bonds transfer` to hand a bond to another CB — useful for alliances, debt settlement, or restructuring reserves without liquidation. C_n pressure on the issuer is unchanged; it just moves from your reserves to theirs.\n" +
                         "**Risk:** If the issuer defaults, the reserve unwinds but you lose the face value premium.",
                     inline: false
                 }
@@ -197,7 +199,7 @@ module.exports = {
                     inline: false
                 }
             )
-            .setFooter({ text: "Use /taxhelp for tax bracket setup · /treasuryhelp for treasury operations · /help for general commands" })
+            .setFooter({ text: "Use /bondshelp for the citizen bond guide · /treasuryhelp for treasury operations · /taxhelp for bracket syntax · /help for general commands" })
         );
 
         return interaction.reply({ embeds });

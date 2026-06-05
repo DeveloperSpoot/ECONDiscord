@@ -14,7 +14,7 @@ module.exports = DB.define("TreasuryBonds", {
         references: { model: "Guilds", key: "IDENT" }
     },
     holderType: {
-        type: DataTypes.ENUM("user", "cb"),
+        type: DataTypes.ENUM("user", "cb", "business"),
         allowNull: true,
         defaultValue: null
     },
@@ -28,6 +28,11 @@ module.exports = DB.define("TreasuryBonds", {
         allowNull: true,
         defaultValue: null,
         references: { model: "GuildMembers", key: "IDENT" }
+    },
+    holderAccount: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null
     },
     faceValue: {
         type: DataTypes.DECIMAL(20, 2),

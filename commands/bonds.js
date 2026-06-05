@@ -17,10 +17,43 @@ module.exports = {
                 .addStringOption(opt =>
                     opt.setName("bond-id")
                         .setDescription("The bond IDENT to purchase.")
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName("business")
+                        .setDescription("Buy with a business account instead of your personal bank.")
+                        .setRequired(false)
+                        .setAutocomplete(true)))
+        .addSubcommand(sub =>
+            sub.setName("transfer")
+                .setDescription("Transfer a bond you hold to another registered user (free — no payment).")
+                .addStringOption(opt =>
+                    opt.setName("bond-id")
+                        .setDescription("The bond IDENT to transfer.")
+                        .setRequired(true))
+                .addUserOption(opt =>
+                    opt.setName("to")
+                        .setDescription("The user to transfer the bond to.")
                         .setRequired(true)))
         .addSubcommand(sub =>
             sub.setName("holdings")
                 .setDescription("View bonds you personally hold.")),
+
+    async autocomplete(interaction) {
+        const focused = interaction.options.getFocused(true);
+        if (focused.name !== 'business') return interaction.respond([]);
+        const guildId = interaction.IDENT ?? interaction.guildId;
+        const memberRecord = await RetrieveData.user(interaction, interaction.user.id).catch(() => null);
+        if (!memberRecord) return interaction.respond([]);
+        const businesses = await SQL.models.Accounts.findAll({
+            where: { guild: guildId, owner: memberRecord.IDENT, type: 'business' },
+            raw: true
+        });
+        const choices = businesses
+            .map(b => ({ name: b.name || b.IDENT.slice(0, 8), value: b.IDENT }))
+            .filter(c => c.name.toLowerCase().includes(focused.value.toLowerCase()))
+            .slice(0, 25);
+        return interaction.respond(choices);
+    },
 
     async execute(interaction) {
         if (!interaction.guild) {
@@ -66,6 +99,7 @@ module.exports = {
         // ── buy ───────────────────────────────────────────────────────────────
         if (sub === "buy") {
             const bondId = interaction.options.getString("bond-id");
+            const businessId = interaction.options.getString("business");
 
             const bond = await SQL.models.TreasuryBonds.findOne({
                 where: { IDENT: bondId, status: "available" }
@@ -77,9 +111,14 @@ module.exports = {
                 });
             }
 
-            if (bond.issuerGuild === interaction.IDENT) {
+            if (bond.issuerGuild !== interaction.IDENT) {
+                const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
+                const issuerName = issuerGuildObj?.name ?? bond.issuerGuild;
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Use `/centralbank bonds buy` to purchase bonds as a CB reserve asset, or contact your CB to handle this.")]
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
+                        `This bond was issued by **${issuerName}**. You must run this command from that server.\n` +
+                        `Use \`/forex exchange\` to convert your currency there first, then purchase the bond from within **${issuerName}**'s server.`
+                    )]
                 });
             }
 
@@ -90,44 +129,56 @@ module.exports = {
                 });
             }
 
-            const bankAccount = await SQL.models.Accounts.findOne({
-                where: { owner: memberRecord.IDENT, type: "personal-bank" },
-                raw: true
-            });
-
-            if (!bankAccount) {
-                return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("No bank account found.")]
+            // Determine paying account: business or personal bank
+            let payingAccount;
+            const isBusinessPurchase = !!businessId;
+            if (isBusinessPurchase) {
+                payingAccount = await SQL.models.Accounts.findOne({
+                    where: { IDENT: businessId, owner: memberRecord.IDENT, type: "business" },
+                    raw: true
                 });
+                if (!payingAccount) {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription("Business account not found or you don't own it.")]
+                    });
+                }
+            } else {
+                payingAccount = await SQL.models.Accounts.findOne({
+                    where: { owner: memberRecord.IDENT, type: "personal-bank" },
+                    raw: true
+                });
+                if (!payingAccount) {
+                    return interaction.editReply({
+                        embeds: [new EmbedBuilder().setColor("Red").setDescription("No bank account found.")]
+                    });
+                }
             }
 
             const purchasePrice = Number(bond.purchasePrice);
-            if (Number(bankAccount.balance) < purchasePrice) {
+            if (Number(payingAccount.balance) < purchasePrice) {
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient funds. Purchase price: ${await guildManager.formatMoney(purchasePrice)} · Your balance: ${await guildManager.formatMoney(bankAccount.balance)}`)]
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`Insufficient funds. Purchase price: ${await guildManager.formatMoney(purchasePrice)} · Balance: ${await guildManager.formatMoney(payingAccount.balance)}`)]
                 });
             }
 
             const now = new Date();
             const maturesAt = new Date(now.getTime() + bond.maturityDays * 24 * 60 * 60 * 1000);
 
-            // Debit buyer's bank
             await SQL.models.Accounts.update(
-                { balance: Number(bankAccount.balance) - purchasePrice },
-                { where: { IDENT: bankAccount.IDENT } }
+                { balance: Number(payingAccount.balance) - purchasePrice },
+                { where: { IDENT: payingAccount.IDENT } }
             );
 
-            // Credit issuer's treasury
             const issuerGuild = await SQL.models.Guilds.findByPk(bond.issuerGuild, { raw: true });
             await SQL.models.Guilds.update(
                 { balance: Number(issuerGuild.balance) + purchasePrice },
                 { where: { IDENT: bond.issuerGuild } }
             );
 
-            // Activate bond
             await bond.update({
-                holderType: "user",
-                holderMember: memberRecord.IDENT,
+                holderType: isBusinessPurchase ? "business" : "user",
+                holderMember: isBusinessPurchase ? null : memberRecord.IDENT,
+                holderAccount: isBusinessPurchase ? payingAccount.IDENT : null,
                 holderGuild: null,
                 issuedAt: now,
                 maturesAt,
@@ -137,11 +188,11 @@ module.exports = {
             await SQL.models.AdvTransactionLogs.create({
                 guild: bond.issuerGuild,
                 amount: purchasePrice,
-                creditAccount: bankAccount.IDENT,
+                creditAccount: payingAccount.IDENT,
                 debitAccount: bond.issuerGuild,
                 creditType: "Account",
                 debitType: "Treasury",
-                memo: `BOND PURCHASE | ${bond.IDENT} | individual`
+                memo: `BOND PURCHASE | ${bond.IDENT} | ${isBusinessPurchase ? 'business' : 'individual'}`
             }).catch(console.error);
 
             const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
@@ -150,6 +201,7 @@ module.exports = {
                 .setColor("Green")
                 .addFields(
                     { name: "Issuer", value: issuerGuildObj?.name ?? bond.issuerGuild, inline: true },
+                    { name: "Paid From", value: isBusinessPurchase ? (payingAccount.name || 'Business') : 'Personal Bank', inline: true },
                     { name: "Paid", value: await guildManager.formatMoney(purchasePrice), inline: true },
                     { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
                     { name: "Yield", value: `${(bond.yieldRate * 100).toFixed(2)}%`, inline: true },
@@ -160,6 +212,62 @@ module.exports = {
 
             await interaction.editReply({ embeds: [embed] });
             await LogGeneral(interaction, "Green", "Bond Purchased", `<@${interaction.user.id}> purchased a bond from ${issuerGuildObj?.name ?? bond.issuerGuild}.`, { name: "Paid", value: await guildManager.formatMoney(purchasePrice), inline: true }, { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true }).catch(console.error);
+        }
+
+        // ── transfer ──────────────────────────────────────────────────────────
+        if (sub === "transfer") {
+            const bondId = interaction.options.getString("bond-id");
+            const toUser = interaction.options.getUser("to");
+
+            const memberRecord = await RetrieveData.user(interaction, interaction.user.id);
+            if (!memberRecord) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("You must be registered.")]
+                });
+            }
+
+            const bond = await SQL.models.TreasuryBonds.findOne({
+                where: { IDENT: bondId, holderType: "user", holderMember: memberRecord.IDENT, status: "active" }
+            });
+
+            if (!bond) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Bond not found, not active, or you don't hold it.")]
+                });
+            }
+
+            const recipientRecord = await RetrieveData.user(interaction, toUser.id);
+            if (!recipientRecord) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(`<@${toUser.id}> is not registered in this server's economy.`)]
+                });
+            }
+
+            if (recipientRecord.IDENT === memberRecord.IDENT) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("You cannot transfer a bond to yourself.")]
+                });
+            }
+
+            await bond.update({ holderMember: recipientRecord.IDENT });
+
+            const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
+            const embed = new EmbedBuilder()
+                .setTitle("Bond Transferred")
+                .setColor("Green")
+                .addFields(
+                    { name: "Bond", value: bond.IDENT.slice(0, 8) + '...', inline: true },
+                    { name: "Issuer", value: issuerGuildObj?.name ?? bond.issuerGuild, inline: true },
+                    { name: "From", value: `<@${interaction.user.id}>`, inline: true },
+                    { name: "To", value: `<@${toUser.id}>`, inline: true },
+                    { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
+                    { name: "Matures", value: `<t:${Math.floor(new Date(bond.maturesAt).getTime() / 1000)}:R>`, inline: true }
+                )
+                .setFooter({ text: "Free transfer — no payment." })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, "Blue", "Bond Transferred", `<@${interaction.user.id}> transferred a bond to <@${toUser.id}>.`, { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true }).catch(console.error);
         }
 
         // ── holdings ──────────────────────────────────────────────────────────

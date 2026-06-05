@@ -139,21 +139,26 @@ module.exports = {
                     name: "📋  Commands",
                     value:
                         "`/treasury bonds issue face-value: yield: maturity-days:` — List bond for sale.\n" +
-                        "`/treasury bonds list` — View issued bonds.\n" +
-                        "`/treasury bonds redeem bond-id:` — Pay out at maturity.",
+                        "`/treasury bonds list` — View all bonds this server has issued.\n" +
+                        "`/treasury bonds redeem bond-id:` — Pay out at maturity (face value to holder).\n" +
+                        "`/treasury bonds buyback bond-id:` — Buy back an active bond early, returning purchase price to the holder (no yield).",
                     inline: false
                 },
                 {
                     name: "⚙️  How It Works",
                     value:
                         "Purchase price = `faceValue / (1 + yield)`. Treasury receives price immediately; pays face value at maturity.\n" +
-                        "Default if unable to pay — visible to all holders.\n" +
-                        "Individual buyers: `/bonds buy`. CB buyers: `/centralbank bonds buy` (also inflates your C_n as reserve).",
+                        "If treasury can't cover face value at redemption, the bond is marked **defaulted**.\n\n" +
+                        "**Buyers:** citizens and businesses use `/bonds buy` (must be run from your server). Foreign CBs use `/centralbank bonds buy` (their payment is FOREX-converted; their CB balance is debited in their own currency).\n\n" +
+                        "**Buyback:** `/treasury bonds buyback` lets you cancel an active bond early. The holder receives only the original purchase price — no yield premium. Useful for clearing debt obligations before maturity.",
                     inline: false
                 },
                 {
                     name: "📐  Example",
-                    value: "Face $10,000 · yield 5% · 30d → price **$9,524**. Treasury gets $9,524 now, pays $10,000 at maturity.",
+                    value:
+                        "Face $10,000 · yield 5% · 30d → price **$9,524**.\n" +
+                        "Treasury gets $9,524 now, pays $10,000 at maturity.\n" +
+                        "If you run `/treasury bonds buyback` before maturity, you pay $9,524 back and the obligation ends.",
                     inline: false
                 }
             )
@@ -178,7 +183,7 @@ module.exports = {
                     inline: false
                 }
             )
-            .setFooter({ text: "/cbhelp — Central Bank · /taxhelp — bracket syntax · /help — member commands" })
+            .setFooter({ text: "/cbhelp — Central Bank · /bondshelp — Bonds for citizens & businesses · /taxhelp — bracket syntax · /help — member commands" })
         );
 
         return interaction.reply({ embeds });

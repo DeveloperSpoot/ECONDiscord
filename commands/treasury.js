@@ -409,6 +409,13 @@ module.exports = {
                         .addStringOption(opt =>
                             opt.setName("bond-id")
                                 .setDescription("The bond IDENT to redeem.")
+                                .setRequired(true)))
+                .addSubcommand(sub =>
+                    sub.setName("buyback")
+                        .setDescription("Buy back an active bond early, returning purchasePrice to the holder (no yield).")
+                        .addStringOption(opt =>
+                            opt.setName("bond-id")
+                                .setDescription("The bond IDENT to buy back.")
                                 .setRequired(true))))
 
         .addSubcommandGroup(subGroup =>
@@ -1439,17 +1446,83 @@ module.exports = {
                         if (newAmt <= 0) await reserveRow.destroy();
                         else await reserveRow.update({ amount: newAmt });
                     }
+                } else if (bond.holderType === 'business' && bond.holderAccount) {
+                    const businessAccount = await SQL.models.Accounts.findByPk(bond.holderAccount, { raw: true });
+                    if (businessAccount) {
+                        await SQL.models.Accounts.update({ balance: Number(businessAccount.balance) + faceValue }, { where: { IDENT: bond.holderAccount } });
+                    }
                 }
                 await bond.update({ status: 'redeemed' });
                 await SQL.models.AdvTransactionLogs.create({
                     guild: interaction.IDENT, amount: faceValue,
-                    creditAccount: interaction.IDENT, debitAccount: bond.holderGuild ?? bond.holderMember ?? interaction.IDENT,
+                    creditAccount: interaction.IDENT, debitAccount: bond.holderGuild ?? bond.holderAccount ?? bond.holderMember ?? interaction.IDENT,
                     creditType: 'Treasury', debitType: bond.holderType === 'cb' ? 'Treasury' : 'Account',
                     memo: `BOND REDEEMED | ${bondId}`
                 }).catch(console.error);
                 const guildManager = new GuildHQ(interaction);
                 await interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Bond Redeemed").addFields({ name: "Face Value Paid", value: await guildManager.formatMoney(faceValue), inline: true }).setTimestamp()] });
                 await LogGeneral(interaction, 'Green', 'Bond Redeemed', `Treasury bond redeemed.`, { name: 'Face Value', value: await guildManager.formatMoney(faceValue), inline: true }).catch(console.error);
+            } break
+
+            case 'buyback': {
+                await interaction.deferReply({});
+                if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+                    return ErrorEmbed(interaction, "You are not authorized to manage the Treasury.");
+                }
+                const bondId = interaction.options.getString('bond-id');
+                const bond = await SQL.models.TreasuryBonds.findOne({ where: { IDENT: bondId, issuerGuild: interaction.IDENT } });
+                if (!bond) return ErrorEmbed(interaction, "Bond not found.", false, false);
+                if (bond.status !== 'active') return ErrorEmbed(interaction, `Bond is not active (status: ${bond.status}).`, false, false);
+
+                const purchasePrice = Number(bond.purchasePrice);
+                const guildRecord = await SQL.models.Guilds.findByPk(interaction.IDENT, { raw: true });
+                if (Number(guildRecord.balance) < purchasePrice) {
+                    return interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Red").setDescription(`Insufficient treasury funds. Required: ${purchasePrice.toFixed(2)} · Balance: ${Number(guildRecord.balance).toFixed(2)}`)] });
+                }
+
+                await SQL.models.Guilds.update({ balance: Number(guildRecord.balance) - purchasePrice }, { where: { IDENT: interaction.IDENT } });
+
+                if (bond.holderType === 'user' && bond.holderMember) {
+                    const holderAccount = await SQL.models.Accounts.findOne({ where: { owner: bond.holderMember, type: 'personal-bank' }, raw: true });
+                    if (holderAccount) {
+                        await SQL.models.Accounts.update({ balance: Number(holderAccount.balance) + purchasePrice }, { where: { IDENT: holderAccount.IDENT } });
+                    }
+                } else if (bond.holderType === 'cb' && bond.holderGuild) {
+                    const [issuerStats, holderStats] = await Promise.all([
+                        getGuildStrength(interaction.IDENT),
+                        getGuildStrength(bond.holderGuild)
+                    ]);
+                    const priceInHolder = (issuerStats.strength > 0 && holderStats.strength > 0)
+                        ? convertCurrency(purchasePrice, issuerStats.strength, holderStats.strength)
+                        : purchasePrice;
+                    const holderRecord = await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true });
+                    await SQL.models.Guilds.update({ cbBalance: Number(holderRecord.cbBalance) + priceInHolder }, { where: { IDENT: bond.holderGuild } });
+                    const reserveRow = await SQL.models.ForexReserves.findOne({ where: { guild: bond.holderGuild, foreignGuild: interaction.IDENT } });
+                    if (reserveRow) {
+                        const newAmt = Number(reserveRow.amount) - purchasePrice;
+                        if (newAmt <= 0) await reserveRow.destroy();
+                        else await reserveRow.update({ amount: newAmt });
+                    }
+                } else if (bond.holderType === 'business' && bond.holderAccount) {
+                    const businessAccount = await SQL.models.Accounts.findByPk(bond.holderAccount, { raw: true });
+                    if (businessAccount) {
+                        await SQL.models.Accounts.update({ balance: Number(businessAccount.balance) + purchasePrice }, { where: { IDENT: bond.holderAccount } });
+                    }
+                }
+
+                await bond.update({ status: 'redeemed' });
+                await SQL.models.AdvTransactionLogs.create({
+                    guild: interaction.IDENT, amount: purchasePrice,
+                    creditAccount: interaction.IDENT, debitAccount: bond.holderGuild ?? bond.holderAccount ?? bond.holderMember ?? interaction.IDENT,
+                    creditType: 'Treasury', debitType: bond.holderType === 'cb' ? 'Treasury' : 'Account',
+                    memo: `BOND BUYBACK | ${bondId}`
+                }).catch(console.error);
+                const guildManager = new GuildHQ(interaction);
+                await interaction.editReply({ embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Bond Bought Back").addFields(
+                    { name: "Purchase Price Returned", value: await guildManager.formatMoney(purchasePrice), inline: true },
+                    { name: "Note", value: "Early buyback — purchase price only, no yield premium.", inline: false }
+                ).setTimestamp()] });
+                await LogGeneral(interaction, 'Orange', 'Bond Bought Back', `Treasury bought back bond ${bondId.slice(0, 8)} early.`, { name: 'Purchase Price', value: await guildManager.formatMoney(purchasePrice), inline: true }).catch(console.error);
             } break
         }
     }

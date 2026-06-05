@@ -113,6 +113,18 @@ module.exports = {
                                 .setDescription("The bond IDENT to purchase.")
                                 .setRequired(true)))
                 .addSubcommand(sub =>
+                    sub.setName("transfer")
+                        .setDescription("Transfer a CB-held bond to another server's CB (free — no payment).")
+                        .addStringOption(opt =>
+                            opt.setName("bond-id")
+                                .setDescription("The bond IDENT to transfer.")
+                                .setRequired(true))
+                        .addStringOption(opt =>
+                            opt.setName("to-guild")
+                                .setDescription("The server whose CB will receive the bond.")
+                                .setRequired(true)
+                                .setAutocomplete(true)))
+                .addSubcommand(sub =>
                     sub.setName("holdings")
                         .setDescription("View all bonds held by this CB."))),
 
@@ -634,6 +646,75 @@ module.exports = {
 
             await interaction.editReply({ embeds: [embed] });
             await LogGeneral(interaction, 'Blue', 'CB Bond Purchased', `CB purchased bond from ${issuerGuildObj?.name ?? bond.issuerGuild}.`, { name: 'You Paid', value: await guildManager.formatMoney(costInHome), inline: true }, { name: 'Face Value', value: `${Number(bond.faceValue).toFixed(2)} ${issuerCurrency}`, inline: true }).catch(console.error);
+            return;
+        }
+
+        // ── bonds transfer ────────────────────────────────────────────────────
+        if (sub === "bonds transfer") {
+            const bondId = interaction.options.getString("bond-id");
+            const targetGuildId = interaction.options.getString("to-guild");
+
+            if (targetGuildId === guildId) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Cannot transfer a bond to your own CB.")]
+                });
+            }
+
+            const bond = await SQL.models.TreasuryBonds.findOne({
+                where: { IDENT: bondId, holderType: "cb", holderGuild: guildId, status: "active" }
+            });
+
+            if (!bond) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Bond not found, not active, or this CB does not hold it.")]
+                });
+            }
+
+            const targetGuild = interaction.client.guilds.cache.get(targetGuildId);
+            if (!targetGuild) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Target server is not accessible to the bot.")]
+                });
+            }
+
+            const purchasePrice = Number(bond.purchasePrice);
+
+            // Rebalance ForexReserves: remove from source CB, add to destination CB
+            const sourceReserve = await SQL.models.ForexReserves.findOne({
+                where: { guild: guildId, foreignGuild: bond.issuerGuild }
+            });
+            if (sourceReserve) {
+                const newAmt = Number(sourceReserve.amount) - purchasePrice;
+                if (newAmt <= 0) await sourceReserve.destroy();
+                else await sourceReserve.update({ amount: newAmt });
+            }
+
+            const [destReserve] = await SQL.models.ForexReserves.findOrCreate({
+                where: { guild: targetGuildId, foreignGuild: bond.issuerGuild },
+                defaults: { guild: targetGuildId, foreignGuild: bond.issuerGuild, amount: 0 }
+            });
+            await destReserve.increment("amount", { by: purchasePrice });
+
+            await bond.update({ holderGuild: targetGuildId });
+
+            const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
+            const embed = new EmbedBuilder()
+                .setTitle("Bond Transferred — CB to CB")
+                .setColor("Green")
+                .addFields(
+                    { name: "Bond", value: bond.IDENT.slice(0, 8) + '...', inline: true },
+                    { name: "Issuer", value: issuerGuildObj?.name ?? bond.issuerGuild, inline: true },
+                    { name: "From CB", value: interaction.guild.name, inline: true },
+                    { name: "To CB", value: targetGuild.name, inline: true },
+                    { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
+                    { name: "Matures", value: `<t:${Math.floor(new Date(bond.maturesAt).getTime() / 1000)}:R>`, inline: true },
+                    { name: "Reserve Effect", value: `C_n pressure on ${issuerGuildObj?.name ?? bond.issuerGuild} transferred — net change: 0`, inline: false }
+                )
+                .setFooter({ text: "Free transfer — no payment." })
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [embed] });
+            await LogGeneral(interaction, 'Blue', 'CB Bond Transferred', `CB transferred bond to ${targetGuild.name}.`, { name: 'To', value: targetGuild.name, inline: true }, { name: 'Face Value', value: await guildManager.formatMoney(bond.faceValue), inline: true }).catch(console.error);
             return;
         }
 
