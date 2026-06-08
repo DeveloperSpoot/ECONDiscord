@@ -171,14 +171,18 @@ module.exports = {
             .addFields(
                 {
                     name: "Full Treasury Authorization",
-                    value: "`/authorize add|remove user:@user` — Grant/revoke full treasury access (owner only). Separate from CB auth.",
+                    value:
+                        "`/authorize add|remove user:@user` — Grant/revoke full treasury access for a user (owner only).\n" +
+                        "`/authorize add|remove role:@role` — Grant/revoke full treasury access for an entire role — anyone holding it gains access.\n" +
+                        "Provide **either** `user:` or `role:`, not both. Separate from CB auth.",
                     inline: false
                 },
                 {
                     name: "Business Manager Authorization",
                     value:
-                        "`/treasury business-auth add user:@user` — Grant business manager access (owner only).\n" +
-                        "`/treasury business-auth remove user:@user` — Revoke business manager access.\n\n" +
+                        "`/treasury business-auth add|remove user:@user` — Grant/revoke business manager access for a user (owner only).\n" +
+                        "`/treasury business-auth add|remove role:@role` — Grant/revoke business manager access for an entire role.\n" +
+                        "Provide **either** `user:` or `role:`, not both.\n\n" +
                         "Business managers can run `/treasury add-business`, `/treasury edit-business`, and `/treasury remove-business` **without** having full treasury access. They cannot access treasury balance, taxes, departments, or other treasury settings.",
                     inline: false
                 },

@@ -457,14 +457,18 @@ module.exports = {
                 .setDescription('Manage business manager authorization (server owner only).')
                 .addSubcommand(sub =>
                     sub.setName('add')
-                        .setDescription('Grant a user business manager access (can create/edit/remove businesses).')
+                        .setDescription('Grant a user or role business manager access (can create/edit/remove businesses).')
                         .addUserOption(opt =>
-                            opt.setName('user').setDescription('User to authorize.').setRequired(true)))
+                            opt.setName('user').setDescription('User to authorize.'))
+                        .addRoleOption(opt =>
+                            opt.setName('role').setDescription('Role to authorize — anyone holding it gains access.')))
                 .addSubcommand(sub =>
                     sub.setName('remove')
-                        .setDescription('Revoke business manager access from a user.')
+                        .setDescription('Revoke business manager access from a user or role.')
                         .addUserOption(opt =>
-                            opt.setName('user').setDescription('User to deauthorize.').setRequired(true)))
+                            opt.setName('user').setDescription('User to deauthorize.'))
+                        .addRoleOption(opt =>
+                            opt.setName('role').setDescription('Role to deauthorize.')))
         ),
 
         //  AUTOCOMPLETE
@@ -608,7 +612,29 @@ module.exports = {
                 });
             }
             const bizAuthUser = interaction.options.getUser('user');
+            const bizAuthRole = interaction.options.getRole('role');
+
+            if (bizAuthUser && bizAuthRole) {
+                return interaction.editReply({
+                    embeds: [new discord.EmbedBuilder().setColor("Red").setDescription("Provide either a `user` or a `role`, not both.")]
+                });
+            }
+            if (!bizAuthUser && !bizAuthRole) {
+                return interaction.editReply({
+                    embeds: [new discord.EmbedBuilder().setColor("Red").setDescription("You must provide either a `user` or a `role`.")]
+                });
+            }
+
             if (_fullSub === 'business-auth add') {
+                if (bizAuthRole) {
+                    await PermManager.Business.authorizeRole(interaction, bizAuthRole);
+                    await interaction.editReply({
+                        embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Business Auth Granted")
+                            .setDescription(`Anyone with the <@&${bizAuthRole.id}> role can now create, edit, and remove businesses.`).setTimestamp()]
+                    });
+                    await LogGeneral(interaction, 'Green', 'Business Auth Granted', `<@${interaction.user.id}> granted business manager access to the <@&${bizAuthRole.id}> role.`).catch(console.error);
+                    return;
+                }
                 await PermManager.Business.authorize(interaction, bizAuthUser);
                 await interaction.editReply({
                     embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Business Auth Granted")
@@ -616,6 +642,21 @@ module.exports = {
                 });
                 await LogGeneral(interaction, 'Green', 'Business Auth Granted', `<@${interaction.user.id}> granted business manager access to <@${bizAuthUser.id}>.`).catch(console.error);
             } else {
+                if (bizAuthRole) {
+                    const roleCheck = await PermManager.Business.checkRoleAuthorization(interaction, bizAuthRole);
+                    if (!roleCheck) {
+                        return interaction.editReply({
+                            embeds: [new discord.EmbedBuilder().setColor("Red").setDescription(`The <@&${bizAuthRole.id}> role does not have business manager access.`)]
+                        });
+                    }
+                    await PermManager.Business.deauthorizeRole(interaction, bizAuthRole);
+                    await interaction.editReply({
+                        embeds: [new discord.EmbedBuilder().setColor("Orange").setTitle("Business Auth Removed")
+                            .setDescription(`<@&${bizAuthRole.id}>'s business manager access has been revoked.`).setTimestamp()]
+                    });
+                    await LogGeneral(interaction, 'Orange', 'Business Auth Removed', `<@${interaction.user.id}> revoked business manager access from the <@&${bizAuthRole.id}> role.`).catch(console.error);
+                    return;
+                }
                 await PermManager.Business.deauthorize(interaction, bizAuthUser);
                 await interaction.editReply({
                     embeds: [new discord.EmbedBuilder().setColor("Orange").setTitle("Business Auth Removed")

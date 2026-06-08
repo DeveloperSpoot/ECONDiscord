@@ -16,6 +16,39 @@ async function getGuildMember(disID, guildID) {
     return await SQL.models.GuildMembers.findOne({ where: options, raw: true})
 }
 
+async function getMemberRoleIds(interaction, userId) {
+    try {
+        const member = interaction.guild.members.cache.get(userId) ?? await interaction.guild.members.fetch(userId);
+        return member ? [...member.roles.cache.keys()] : [];
+    } catch {
+        return [];
+    }
+}
+
+// Checks whether any of the target user's roles carry an authorization grant of the given type.
+async function checkRoleAuth(interaction, userId, type) {
+    const roleIds = await getMemberRoleIds(interaction, userId);
+    if (roleIds.length === 0) return null;
+    return await SQL.models.AuthorizedUsers.findOne({
+        where: { guild: interaction.IDENT, type: type, roleId: { [Op.in]: roleIds } }
+    });
+}
+
+async function authorizeRoleByType(interaction, role, type) {
+    return await SQL.models.AuthorizedUsers.findOrCreate({
+        where: { guild: interaction.IDENT, roleId: role.id, type: type },
+        defaults: { guild: interaction.IDENT, roleId: role.id, type: type }
+    });
+}
+
+async function deauthorizeRoleByType(interaction, role, type) {
+    return await SQL.models.AuthorizedUsers.destroy({ where: { guild: interaction.IDENT, roleId: role.id, type: type } });
+}
+
+async function checkRoleAuthorizationByType(interaction, role, type) {
+    return await SQL.models.AuthorizedUsers.findOne({ where: { guild: interaction.IDENT, roleId: role.id, type: type } });
+}
+
 async function checkTreasuryAuth(interaction, user){
     if(interaction.IDENT !== interaction.guildId){return false}
     if(interaction.member.permissions.has(PermissionsBitField.Flags.Administrator) && interaction.IDENT === interaction.guildId){
@@ -141,10 +174,13 @@ module.exports = {
     },
     // Server-level "business manager" authorization — allows managing businesses without full treasury access
     checkAuthorization: async function(interaction, user) {
-        const User = await getGuildMember(user.id, interaction.IDENT);
         if (interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
-        if (User === null) return null;
-        return await SQL.models.AuthorizedUsers.findOne({ where: { id: User.IDENT, type: 'business' } });
+        const User = await getGuildMember(user.id, interaction.IDENT);
+        if (User !== null) {
+            const userAuth = await SQL.models.AuthorizedUsers.findOne({ where: { id: User.IDENT, type: 'business' } });
+            if (userAuth) return userAuth;
+        }
+        return await checkRoleAuth(interaction, user.id, 'business');
     },
     authorize: async function(interaction, user) {
         const User = await getGuildMember(user.id, interaction.IDENT);
@@ -156,6 +192,15 @@ module.exports = {
     deauthorize: async function(interaction, user) {
         const User = await getGuildMember(user.id, interaction.IDENT);
         return await SQL.models.AuthorizedUsers.destroy({ where: { id: User.IDENT, guild: interaction.IDENT, type: 'business' } });
+    },
+    authorizeRole: async function(interaction, role) {
+        return await authorizeRoleByType(interaction, role, 'business');
+    },
+    deauthorizeRole: async function(interaction, role) {
+        return await deauthorizeRoleByType(interaction, role, 'business');
+    },
+    checkRoleAuthorization: async function(interaction, role) {
+        return await checkRoleAuthorizationByType(interaction, role, 'business');
     }
     },
     Department: {
@@ -194,36 +239,56 @@ module.exports = {
     },
     Treasury: {
         checkAuthorization: async function(interaction, user){
-            const User = await getGuildMember(user.id, interaction.IDENT);
             if(interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)){
                 return true;
             }
 
-            if(User === null){
-                return null
+            const User = await getGuildMember(user.id, interaction.IDENT);
+            if (User !== null) {
+                const userAuth = await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'treasury'}});
+                if (userAuth) return userAuth;
             }
-            return await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'treasury'}})
+            return await checkRoleAuth(interaction, user.id, 'treasury');
         },
         deauthorize: async function(interaction, user){
             const User = await getGuildMember(user.id, interaction.IDENT);
             return await SQL.models.AuthorizedUsers.destroy({where: {id: User.IDENT, type: 'treasury'}});
+        },
+        authorizeRole: async function(interaction, role) {
+            return await authorizeRoleByType(interaction, role, 'treasury');
+        },
+        deauthorizeRole: async function(interaction, role) {
+            return await deauthorizeRoleByType(interaction, role, 'treasury');
+        },
+        checkRoleAuthorization: async function(interaction, role) {
+            return await checkRoleAuthorizationByType(interaction, role, 'treasury');
         }
     },
     CentralBank: {
         checkAuthorization: async function(interaction, user){
-            const User = await getGuildMember(user.id, interaction.IDENT);
             if(interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)){
                 return true;
             }
 
-            if(User === null){
-                return null
+            const User = await getGuildMember(user.id, interaction.IDENT);
+            if (User !== null) {
+                const userAuth = await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'centralbank'}});
+                if (userAuth) return userAuth;
             }
-            return await SQL.models.AuthorizedUsers.findOne({where: {id: User.IDENT, type: 'centralbank'}})
+            return await checkRoleAuth(interaction, user.id, 'centralbank');
         },
         deauthorize: async function(interaction, user){
             const User = await getGuildMember(user.id, interaction.IDENT);
             return await SQL.models.AuthorizedUsers.destroy({where: {id: User.IDENT, type: 'centralbank'}});
+        },
+        authorizeRole: async function(interaction, role) {
+            return await authorizeRoleByType(interaction, role, 'centralbank');
+        },
+        deauthorizeRole: async function(interaction, role) {
+            return await deauthorizeRoleByType(interaction, role, 'centralbank');
+        },
+        checkRoleAuthorization: async function(interaction, role) {
+            return await checkRoleAuthorizationByType(interaction, role, 'centralbank');
         }
     },
 }

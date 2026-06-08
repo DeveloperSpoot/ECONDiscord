@@ -80,18 +80,22 @@ module.exports = {
                 .setDescription("Manage who can use Central Bank commands.")
                 .addSubcommand(sub =>
                     sub.setName("add")
-                        .setDescription("Authorize a user to manage the Central Bank.")
+                        .setDescription("Authorize a user or role to manage the Central Bank.")
                         .addUserOption(opt =>
                             opt.setName("user")
-                                .setDescription("The user to authorize.")
-                                .setRequired(true)))
+                                .setDescription("The user to authorize."))
+                        .addRoleOption(opt =>
+                            opt.setName("role")
+                                .setDescription("The role to authorize — anyone holding it gains access.")))
                 .addSubcommand(sub =>
                     sub.setName("remove")
-                        .setDescription("Remove a user's Central Bank authorization.")
+                        .setDescription("Remove a user's or role's Central Bank authorization.")
                         .addUserOption(opt =>
                             opt.setName("user")
-                                .setDescription("The user to deauthorize.")
-                                .setRequired(true))))
+                                .setDescription("The user to deauthorize."))
+                        .addRoleOption(opt =>
+                            opt.setName("role")
+                                .setDescription("The role to deauthorize."))))
 
         // reserves subcommand group
         .addSubcommandGroup(group =>
@@ -165,8 +169,33 @@ module.exports = {
             }
 
             const user = interaction.options.getUser("user");
+            const role = interaction.options.getRole("role");
+
+            if (user && role) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Provide either a `user` or a `role`, not both.")]
+                });
+            }
+            if (!user && !role) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("You must provide either a `user` or a `role`.")]
+                });
+            }
 
             if (sub === "authorize add") {
+                if (role) {
+                    await PermManager.CentralBank.authorizeRole(interaction, role);
+                    await interaction.editReply({
+                        embeds: [new EmbedBuilder()
+                            .setColor("Green")
+                            .setTitle("CB Authorization Granted")
+                            .setDescription(`Anyone with the <@&${role.id}> role can now manage the Central Bank.`)
+                            .setTimestamp()]
+                    });
+                    await LogGeneral(interaction, 'Green', 'CB Authorization Granted', `<@${interaction.user.id}> granted CB access to the <@&${role.id}> role.`).catch(console.error);
+                    return;
+                }
+
                 await CreateData.cbAuthorizedUser(interaction, user).catch(async err => {
                     return interaction.editReply({
                         embeds: [new EmbedBuilder().setColor("Red").setDescription(`Error: ${err.message}`)]
@@ -185,6 +214,25 @@ module.exports = {
             }
 
             if (sub === "authorize remove") {
+                if (role) {
+                    const roleCheck = await PermManager.CentralBank.checkRoleAuthorization(interaction, role);
+                    if (!roleCheck) {
+                        return interaction.editReply({
+                            embeds: [new EmbedBuilder().setColor("Red").setDescription(`The <@&${role.id}> role does not have Central Bank authorization.`)]
+                        });
+                    }
+                    await PermManager.CentralBank.deauthorizeRole(interaction, role);
+                    await interaction.editReply({
+                        embeds: [new EmbedBuilder()
+                            .setColor("Green")
+                            .setTitle("CB Authorization Removed")
+                            .setDescription(`<@&${role.id}>'s Central Bank authorization has been removed.`)
+                            .setTimestamp()]
+                    });
+                    await LogGeneral(interaction, 'Orange', 'CB Authorization Removed', `<@${interaction.user.id}> removed CB access from the <@&${role.id}> role.`).catch(console.error);
+                    return;
+                }
+
                 const check = await PermManager.CentralBank.checkAuthorization(interaction, user);
                 if (!check) {
                     return interaction.editReply({

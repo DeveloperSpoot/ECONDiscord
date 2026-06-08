@@ -188,8 +188,9 @@ module.exports = {
                 {
                     name: "Managing Access",
                     value:
-                        "`/centralbank authorize add user:@user` — Grant a user CB access (server owner only).\n" +
-                        "`/centralbank authorize remove user:@user` — Revoke CB access (server owner only).\n\n" +
+                        "`/centralbank authorize add|remove user:@user` — Grant/revoke CB access for a user (server owner only).\n" +
+                        "`/centralbank authorize add|remove role:@role` — Grant/revoke CB access for an entire role — anyone holding it gains access.\n" +
+                        "Provide **either** `user:` or `role:`, not both.\n\n" +
                         "CB authorization is completely separate from treasury authorization — you can give different people control of each.",
                     inline: false
                 },
@@ -198,7 +199,7 @@ module.exports = {
                     value:
                         "• Server owner (always)\n" +
                         "• Discord Administrators (always)\n" +
-                        "• Users explicitly authorized via `/centralbank authorize add`",
+                        "• Users (or holders of roles) explicitly authorized via `/centralbank authorize add`",
                     inline: false
                 }
             )

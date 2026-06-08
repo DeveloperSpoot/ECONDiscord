@@ -26,7 +26,7 @@ header-includes:
 
 The Central Bank (CB) is the monetary authority of your server's economy. It is **entirely separate from the Treasury** — the Treasury funds government operations and departments, while the CB controls the money supply, manages foreign reserves, and holds sovereign bonds.
 
-**Access:** Only the server owner and users explicitly authorized via `/centralbank authorize add` can run CB commands. All CB command results are **public** — every member can see them.
+**Access:** Only the server owner and users (or holders of authorized roles) explicitly authorized via `/centralbank authorize add` can run CB commands. All CB command results are **public** — every member can see them.
 
 ---
 
@@ -37,9 +37,11 @@ The Central Bank (CB) is the monetary authority of your server's economy. It is 
 | Command | Description |
 |---|---|
 | `/centralbank authorize add user:@user` | Grant a user full CB access (owner only) |
-| `/centralbank authorize remove user:@user` | Revoke CB access (owner only) |
+| `/centralbank authorize add role:@role` | Grant an entire role CB access — anyone holding it gains access (owner only) |
+| `/centralbank authorize remove user:@user` | Revoke a user's CB access (owner only) |
+| `/centralbank authorize remove role:@role` | Revoke a role's CB access (owner only) |
 
-CB authorization is **completely separate** from Treasury authorization. You can give different people control of each institution. Discord Administrators and the server owner always retain CB access regardless.
+Provide **either** `user:` or `role:` — not both. CB authorization is **completely separate** from Treasury authorization. You can give different people (or roles) control of each institution. Discord Administrators and the server owner always retain CB access regardless.
 
 ---
 
@@ -239,8 +241,8 @@ New servers with no recorded activity get estimated metrics based on their regis
 | View exchange rates | `/forex rate target-server:` |
 | View strength metrics | `/forex strength` |
 | Execute currency exchange | `/forex exchange amount: target-server:` |
-| Grant CB access | `/centralbank authorize add user:@user` |
-| Revoke CB access | `/centralbank authorize remove user:@user` |
+| Grant CB access (user or role) | `/centralbank authorize add user:@user` / `role:@role` |
+| Revoke CB access (user or role) | `/centralbank authorize remove user:@user` / `role:@role` |
 
 ---
 

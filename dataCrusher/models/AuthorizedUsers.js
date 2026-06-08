@@ -18,11 +18,15 @@ module.exports = DB.define("AuthorizedUsers", {
     },
     id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
             model: "GuildMembers",
             key: "IDENT"
         }
+    },
+    roleId: {
+        type: DataTypes.TEXT,
+        allowNull: true
     },
     type: {
         type: DataTypes.TEXT,
