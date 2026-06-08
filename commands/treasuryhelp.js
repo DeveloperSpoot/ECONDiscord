@@ -172,7 +172,7 @@ module.exports = {
                 {
                     name: "Full Treasury Authorization",
                     value:
-                        "`/authorize add|remove user:@user` — Grant/revoke full treasury access for a user (owner only).\n" +
+                        "`/authorize add|remove user:@user` — Grant/revoke full treasury access for a user (server owner or Administrators).\n" +
                         "`/authorize add|remove role:@role` — Grant/revoke full treasury access for an entire role — anyone holding it gains access.\n" +
                         "Provide **either** `user:` or `role:`, not both. Separate from CB auth.",
                     inline: false

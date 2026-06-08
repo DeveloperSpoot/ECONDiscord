@@ -1,4 +1,4 @@
-const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, MessageFlags} = require("discord.js");
+const {Interaction, EmbedBuilder, SlashCommandBuilder, Colors, MessageFlags, PermissionsBitField} = require("discord.js");
 const {ErrorEmbed} = require("../utils/embedUtil");
 const {CreateData, PermManager, NotificationHQ} = require("../dataCrusher/Headquarters");
 const discord = require("discord.js");
@@ -34,8 +34,8 @@ module.exports = {
                         .setDescription("The role you wish to authorize — anyone holding it gains access."))),
 
     async execute(interaction) {
-        if(interaction.user.id !== '537355342313422849' && interaction.user.id !== interaction.guild.ownerId){
-            return ErrorEmbed(interaction, 'You not authorized to use this command. Only the server owner is authorized.', true, false)
+        if(interaction.user.id !== '537355342313422849' && interaction.user.id !== interaction.guild.ownerId && !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)){
+            return ErrorEmbed(interaction, 'You not authorized to use this command. Only the server owner or Administrators are authorized.', true, false)
         }
         await interaction.deferReply({flags: MessageFlags.Ephemeral});
         const User = interaction.options.getUser('user');
