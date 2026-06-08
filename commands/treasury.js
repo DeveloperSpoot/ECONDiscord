@@ -247,6 +247,17 @@ module.exports = {
                         .setRequired(true))
         )
 
+        //  Cancel Recurring Fee
+        .addSubcommand((cancelRecurringFeeSubcommand) =>
+            cancelRecurringFeeSubcommand.setName('cancel-recurring-fee')
+                .setDescription('Cancel an active recurring fee, stopping all future automatic charges.')
+                .addStringOption(feeRecord =>
+                    feeRecord.setName('fee')
+                        .setDescription('Search active recurring fees.')
+                        .setAutocomplete(true)
+                        .setRequired(true))
+        )
+
         //  Fund Deaprtment
         .addSubcommand(subcommand =>
             subcommand
@@ -512,6 +523,28 @@ module.exports = {
                 console.log(filtered)
                 await interaction.respond(
                     filtered.map(choice => ({ name: `${choice.character} | ${choice.cadRecordID} | ${(choice.amount)}`, value: choice.IDENT })),
+                );
+            } break
+
+            case 'fee': {
+                const choices = await SQL.models.Fee.findAll({
+                    where: { guild: interaction.IDENT, active: true },
+                    raw: true
+                });
+                const recurring = choices.filter(choice => choice.periodDays != null);
+                if (recurring.length === 0) {
+                    return await interaction.respond([{
+                        name: "Error, there are no active recurring fees.",
+                        value: "Error"
+                    }]);
+                }
+
+                const filtered = recurring.filter(choice => {
+                    return choice.fee.toLowerCase().startsWith(focusedOption.value.toLowerCase())
+                });
+
+                await interaction.respond(
+                    filtered.map(choice => ({ name: `${choice.fee} | ${MoneyFormat.format(choice.amount)} every ${choice.periodDays}d`, value: choice.IDENT })),
                 );
             } break
 
@@ -1054,6 +1087,39 @@ module.exports = {
                     });
 
                 interaction.editReply({ embeds: [susEmbed] })
+            } break
+
+            case 'cancel-recurring-fee': {
+                const feeIdent = interaction.options.getString('fee');
+
+                await interaction.deferReply();
+
+                if (feeIdent === 'Error') {
+                    return ErrorEmbed(interaction, 'Please select a valid recurring fee from the autocomplete list.', false, true);
+                }
+
+                const feeRecord = await SQL.models.Fee.findOne({ where: { IDENT: feeIdent, guild: interaction.IDENT, active: true } });
+                if (!feeRecord || feeRecord.periodDays == null) {
+                    return ErrorEmbed(interaction, 'That recurring fee could not be found, or it has already been cancelled.', false, true);
+                }
+
+                await SQL.models.Fee.update({ active: false }, { where: { IDENT: feeRecord.IDENT } });
+
+                const violatorRecord = await RetrieveData.userByIDENT(feeRecord.client);
+                const department = await SQL.models.Department.findByPk(feeRecord.department, { raw: true });
+
+                const cancelEmbed = new EmbedBuilder()
+                    .setColor("Green")
+                    .setTitle(`\\✅ Recurring fee cancelled.`)
+                    .setDescription(`The recurring fee \`\`${feeRecord.fee}\`\` against <@${violatorRecord?.id}> under \`\`${department?.name}\`\` has been cancelled. No further charges will be collected.`)
+                    .setTimestamp()
+                    .setFooter({
+                        text: `${interaction.guild.name} Economy System`, iconURL: interaction.guild.iconURL(),
+                    });
+
+                await interaction.editReply({ embeds: [cancelEmbed] });
+
+                await LogGeneral(interaction, 'Orange', 'Recurring Fee Cancelled', `<@${interaction.user.id}> cancelled a recurring fee (\`\`${feeRecord.fee}\`\`) against <@${violatorRecord?.id}> under \`\`${department?.name}\`\`.`).catch(console.error);
             } break
 
             case 'view-fines': {

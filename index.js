@@ -29,6 +29,7 @@ const SQL = require("./dataCrusher/Server");
         await SQL.models.AuthorizedUsers.sync({alter: true}) // ADD roleId column, id now nullable — comment out after first restart
         await SQL.models.TreasuryBonds.sync({alter: true}) // ADD holderAccount, business holderType — comment out after first restart
         await SQL.models.ForexPool.sync({alter: true}) // ADD ForexPool table — comment out after first restart
+        await SQL.models.Fee.sync({alter: true}) // ADD periodDays, lastChargedAt, active columns — comment out after first restart
         // await SQL.models.Guilds.sync({alter: true}) // ADD forexUpdateChannel, forexLastRate — comment out after first restart
         // await SQL.models.GuildMembersc({alter:true})
         // await SQL.sync({force: true})

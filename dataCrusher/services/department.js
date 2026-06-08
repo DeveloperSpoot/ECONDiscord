@@ -240,6 +240,50 @@ Department.prototype = {
             console.log(err)
         }
     },
+    issueRecurringFee: async function (FEE, periodDays){
+        try{
+            const dataResult = await SQL.models.Fee.create({
+                guild: this.interaction.IDENT,
+                fee: FEE.reason,
+                amount: FEE.amount,
+                client: FEE.client.IDENT,
+                issuer: FEE.issuer.IDENT,
+                department: this.IDENT,
+                periodDays: periodDays,
+                active: true
+            });
+
+            const depName = await this.getName();
+            const guildManager = new Guild(this.interaction);
+
+            // Attempt the first charge immediately — silent, straight from the bank account
+            const clientAccounts = await FEE.client.getBasicAccounts();
+            let charged = false;
+            if (Number(clientAccounts.bank.balance) >= Number(FEE.amount)){
+                const Treasury = await SQL.models.Guilds.findByPk(this.interaction.IDENT);
+                await SQL.models.Accounts.update({balance: Number(clientAccounts.bank.balance) - Number(FEE.amount)}, {where: {IDENT: clientAccounts.bank.IDENT}});
+                await SQL.models.Guilds.update({balance: Number(Treasury.balance) + Number(FEE.amount)}, {where: {IDENT: this.interaction.IDENT}});
+                await SQL.models.AdvTransactionLogs.create({
+                    guild: this.interaction.IDENT,
+                    amount: FEE.amount,
+                    creditAccount: clientAccounts.bank.IDENT,
+                    debitAccount: this.interaction.IDENT,
+                    creditType: "Account",
+                    debitType: "Treasury",
+                    memo: String(`${depName} Recurring Fee For ${FEE.reason} (initial charge).`)
+                }).catch(err=>console.log(err));
+                await SQL.models.Fee.update({lastChargedAt: new Date()}, {where: {IDENT: dataResult.IDENT}});
+                charged = true;
+            }
+
+            await LogActivity(this.interaction, 'Orange', "Recurring Fee Issued", `A Recurring Fee Has Been Issued To <@${FEE.client.id}> By \`\`${depName}\`\` (every ${periodDays} day(s)).`, {name: "Amount", value: `${await guildManager.formatMoney(FEE.amount)}`, inline: true},
+                {name: 'Period', value: `${periodDays} day(s)`, inline: true}, {name: 'Issued By', value: `<@${FEE.issuer.id}>`, inline: true})
+
+            return { record: dataResult, charged };
+        }catch(err){
+            console.log(err)
+        }
+    },
     editDepartment: {
         name: async function(Department, name){
             try {

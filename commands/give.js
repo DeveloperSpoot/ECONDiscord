@@ -20,7 +20,7 @@ module.exports = {
                     option.setName("memo").setDescription("The reason for the transaction.")
                 )
         )
-        .addSubcommand(cmd => cmd.setName("to-user").setDescription("Give money to a user.")
+        .addSubcommand(cmd => cmd.setName("to-user").setDescription("Send money from your bank account directly to another user's bank account.")
             .addUserOption((option) =>
                 option
                     .setName("user")
@@ -96,30 +96,49 @@ module.exports = {
         switch(interaction.options.getSubcommand()){
             case "to-user": {
                 const memberToCheck = interaction.options.getMember("user");
+                const amount = interaction.options.getNumber("amount");
+
+                if (memberToCheck.id === interaction.user.id) {
+                    return interaction.reply({
+                        content: "You cannot give money to yourself.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                if (!giverAccounts.bank) {
+                    return interaction.reply({
+                        content: "You do not have a bank account registered to the economy!",
+                    });
+                }
+
                 const receiverAccounts = await RetrieveData.userBasicAccounts(interaction, memberToCheck);
-        
-        
+                if (!receiverAccounts?.bank) {
+                    return interaction.reply({
+                        content: `<@${memberToCheck.id}> does not have a bank account registered to the economy.`,
+                    });
+                }
+
                 await UpdateData.accountBalance(
                     interaction,
-                    receiverAccounts.wallet.id,
-                    giverAccounts.wallet.id,
-                    interaction.options.getNumber("amount")
+                    receiverAccounts.bank.id,
+                    giverAccounts.bank.id,
+                    amount
                 )
                     .then(async (result) => {
                         if (result === "Insufficient Funds") {
                             return interaction.reply({
-                                content: "You do not have enough money to give that amount!",
+                                content: "You do not have enough money in your bank account to give that amount!",
                             });
                         }
                         const embed = new EmbedBuilder()
                             .setTitle(`Transaction Complete`)
                             .setDescription(
-                                "The transaction was completed successfully! The transaction details are below and the receiver will be notified."
+                                "The transaction was completed successfully! The funds have been moved from your bank account to theirs, and the receiver will be notified."
                             )
                             .addFields([
                                 {
                                     name: "Amount Given",
-                                    value: (await guildManager.formatMoney(interaction.options.getNumber("amount")))
+                                    value: (await guildManager.formatMoney(amount))
                                 },
                                 {name: "Memo", value: (interaction.options.getString("memo") || "No Reason Given")}
                             ])
@@ -130,20 +149,20 @@ module.exports = {
                             });
                        const Transaction =  await CreateData.basicTransaction(
                             interaction,
-                            receiverAccounts.wallet.id,
-                            giverAccounts.wallet.id,
-                            interaction.options.getNumber("amount"),
+                            receiverAccounts.bank.id,
+                            giverAccounts.bank.id,
+                            amount,
                             interaction.options.getString("memo")
                         );
                         if(Transaction.amount >= 5000) { await NotificationHQ.flagNotification(interaction, Transaction);}
                         const User = interaction.options.getMember("user");
                         await interaction.reply({embeds: [embed]}).catch(e => console.log(e));
-                        await LogGeneral(interaction, 'Green', 'Funds Issued', `<@${interaction.user.id}> issued funds to <@${User.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(interaction.options.getNumber("amount")), inline: true}).catch(console.error);
+                        await LogGeneral(interaction, 'Green', 'Funds Issued', `<@${interaction.user.id}> issued funds to <@${User.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}).catch(console.error);
                         await User
                             .send(
                                 `${giver.displayName} gave you ${await guildManager.formatMoney(
-                                    interaction.options.getNumber("amount")
-                                )} for ${
+                                    amount
+                                )} directly to your bank account for ${
                                     interaction.options.getString("memo") || "no reason"
                                 }!`
                             )
@@ -154,8 +173,8 @@ module.exports = {
                                     }>, you have your DMs off for this server, which is why we are pinging you! \n > ${
                                         giver.displayName
                                     } gave you ${await guildManager.formatMoney(
-                                        interaction.options.getNumber("amount")
-                                    )} for ${
+                                        amount
+                                    )} directly to your bank account for ${
                                         interaction.options.getString("memo") || "no reason"
                                     }!`
                                 )

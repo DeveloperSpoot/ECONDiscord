@@ -1,4 +1,5 @@
 const { scheduleForexUpdates } = require('../dataCrusher/services/forexUpdate');
+const { scheduleFeeUpdates } = require('../dataCrusher/services/feeUpdate');
 
 module.exports = {
 	name: 'clientReady',
@@ -6,5 +7,6 @@ module.exports = {
 	execute(client) {
 		console.log(`Ready! Logged in as ${client.user.tag}`);
 		scheduleForexUpdates(client);
+		scheduleFeeUpdates(client);
 	},
 };

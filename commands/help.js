@@ -16,8 +16,9 @@ module.exports = {
             .setTitle('ECON | Help')
             .setDescription(
                 "You must be registered to use most commands. Run `/register` to get started.\n" +
+                "New here? Run `/userguide` for a quick rundown of everyday member commands.\n" +
                 "New server? Run `/setup` for a guided configuration walkthrough.\n\n" +
-                "**Detailed guides:** `/setup` · `/treasuryhelp` · `/cbhelp` · `/bondshelp` · `/taxhelp`"
+                "**Detailed guides:** `/userguide` · `/setup` · `/treasuryhelp` · `/cbhelp` · `/bondshelp` · `/taxhelp`"
             )
             .setColor("#33E300")
             .setTimestamp()

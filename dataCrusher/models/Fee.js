@@ -31,6 +31,21 @@ const Fee = DB.define("Fee", {
             model: "GuildMembers",
             key: "IDENT"
         }
+    },
+    periodDays: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: null
+    },
+    lastChargedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
+    active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     freezeTableName: true

@@ -56,7 +56,18 @@ module.exports = {
                 },
                 {
                     name: "🔍  Fines & Fees",
-                    value: "`/treasury view-fines` · `/treasury view-fees` · `/treasury dismiss-fine fine:`",
+                    value:
+                        "`/treasury view-fines` · `/treasury view-fees` · `/treasury dismiss-fine fine:`\n" +
+                        "`/treasury cancel-recurring-fee fee:` — Stop all future charges on a recurring fee.",
+                    inline: false
+                },
+                {
+                    name: "🔁  Recurring Fees",
+                    value:
+                        "`/dep issue fee ... periodicity-days:` — Leave blank for a one-time fee, or set a number of days to make it recur.\n" +
+                        "Recurring fees are charged **silently and automatically** from the violator's bank account every period (no DM confirmation/payment-method prompt). The first charge is attempted immediately on creation.\n" +
+                        "If the bank balance is insufficient, the charge is skipped and retried automatically the next day — the member is notified either way.\n" +
+                        "Use `/treasury cancel-recurring-fee` to permanently stop future charges.",
                     inline: false
                 }
             )

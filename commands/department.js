@@ -217,6 +217,13 @@ module.exports = {
                 .setDescription("The amount of the fee you wish to issue.")
                 .setRequired(true)
             )
+            .addIntegerOption((intOp) =>
+              intOp
+                .setName("periodicity-days")
+                .setDescription("Make this a recurring fee, re-charged automatically every N days. Leave blank for a one-time fee.")
+                .setMinValue(1)
+                .setRequired(false)
+            )
         )
     ),
 
@@ -568,12 +575,54 @@ module.exports = {
           const amount = interaction.options.getNumber("amount");
           const reason = interaction.options.getString("reason");
 
+          const periodicityDays = interaction.options.getInteger("periodicity-days");
+
           const TS = new Date().getMilliseconds();
           const client = await new UserHQ(interaction, Member.id);
           const issuer = await new UserHQ(interaction, interaction.user.id);
           await issuer.getIDENT();
           await client.getIDENT();
           const Fee = { reason, client, issuer, amount };
+
+          // ── Recurring fee: skip the interactive confirmation, charge silently from bank each period ──
+          if (periodicityDays) {
+            const result = await Department.issueRecurringFee(Fee, periodicityDays);
+
+            const recurringEmbed = new discord.EmbedBuilder()
+              .setColor(result?.charged ? "Green" : "Orange")
+              .setTitle("Recurring Fee Established")
+              .setDescription(
+                `A recurring fee under \`\`${await Department.getName()}\`\` has been set up for ${Member}.` +
+                (result?.charged
+                  ? " The first charge was collected from their bank account."
+                  : " **Their first charge could not be collected (insufficient bank funds) — it will retry automatically.**")
+              )
+              .addFields(
+                { name: "Reason", value: reason, inline: true },
+                { name: "Amount", value: `${await guildManager.formatMoney(amount)}`, inline: true },
+                { name: "Every", value: `${periodicityDays} day(s)`, inline: true }
+              )
+              .setTimestamp()
+              .setFooter({ text: `${interaction.guild.name} Economy System`, iconURL: interaction.guild.iconURL() });
+
+            await interaction.editReply({ embeds: [recurringEmbed] });
+
+            const violatorEmbed = new discord.EmbedBuilder()
+              .setDescription(`\`\`${await Department.getName()}\`\` has set up a **recurring fee** against you. It will be automatically deducted from your bank account every **${periodicityDays} day(s)**.`)
+              .addFields(
+                { name: "Reason", value: reason, inline: true },
+                { name: "Amount per charge", value: `${await guildManager.formatMoney(amount)}`, inline: true },
+                { name: "Issuer", value: `${interaction.user}`, inline: true }
+              )
+              .setColor("Orange")
+              .setTimestamp()
+              .setFooter({ text: `${interaction.guild.name} Economy System`, iconURL: interaction.guild.iconURL() });
+
+            await Member.send({ embeds: [violatorEmbed] }).catch(() => {});
+
+            await LogGeneral(interaction, 'Orange', 'Recurring Fee Issued', `<@${interaction.user.id}> set up a recurring fee against <@${Member.id}>.`, {name: 'Amount', value: await guildManager.formatMoney(amount), inline: true}, {name: 'Every', value: `${periodicityDays} day(s)`, inline: true}, {name: 'Reason', value: reason, inline: true}).catch(console.error);
+            break;
+          }
 
           let customerDMEmbed = await SimpleEmbed(
             interaction,
