@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("userguide")
-        .setDescription("A quick rundown of the commands every member should know — money, income, fines, businesses, and more."),
+        .setDescription("Quick guide to everyday commands — money, income, fines, businesses, bonds, and more."),
 
     async execute(interaction) {
         const embeds = [];
