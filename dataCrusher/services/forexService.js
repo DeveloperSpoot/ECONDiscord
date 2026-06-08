@@ -51,13 +51,16 @@ async function getGuildStrength(guildId) {
     }) ?? 0;
     const guildRecord = await SQL.models.Guilds.findByPk(guildId, { raw: true });
 
-    // Units of this server's currency held as reserves by OTHER servers
-    // Self-holdings excluded (self-buy is blocked; defence uses sell+destroy chain)
+    // Legacy ForexReserves — always 0 under the pool model but kept for safety
     const foreignHeldReserves = await SQL.models.ForexReserves.sum('amount', {
         where: { foreignGuild: guildId, guild: { [Op.ne]: guildId } }
     }) ?? 0;
 
-    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0) + Number(guildRecord?.cbBalance ?? 0) + Number(foreignHeldReserves);
+    // Pool balances: this server's currency sitting in any nostro/vostro pool
+    const poolA = await SQL.models.ForexPool.sum('balanceA', { where: { guildA: guildId } }) ?? 0;
+    const poolB = await SQL.models.ForexPool.sum('balanceB', { where: { guildB: guildId } }) ?? 0;
+
+    const C = Number(accountSum ?? 0) + Number(departmentSum) + Number(guildRecord?.balance ?? 0) + Number(guildRecord?.cbBalance ?? 0) + Number(foreignHeldReserves) + Number(poolA) + Number(poolB);
 
     const strength = serverStrength(M, V, E, C);
 

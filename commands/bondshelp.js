@@ -86,17 +86,18 @@ module.exports = {
                         "1. Find a bond you want via `/bonds list`. Note the issuer server.\n" +
                         "2. Go to the **issuer's Discord server**.\n" +
                         "3. Convert your currency: `/forex exchange amount: target-server:<your server>` to get the issuer's currency into your account there.\n" +
+                        "   — *Requires a liquidity pool between the two servers. A CB from either server must fund it first via `/forex pool deposit`.*\n" +
                         "4. Run `/bonds buy bond-id:<id>` **from within the issuer's server**.\n\n" +
                         "Your bank account in the issuer's server is debited — no cross-server money transplant occurs. " +
                         "The bond payout at maturity also lands in your account in the issuer's server.",
                     inline: false
                 },
                 {
-                    name: "🚫  Why You Can't Buy Cross-Server Directly",
+                    name: "💧  Liquidity Pools",
                     value:
-                        "Bond prices are in the issuer's currency. If you paid from a different server's account, " +
-                        "the bot would have to teleport money between currency systems with no exchange. " +
-                        "The convert-then-buy flow ensures all transactions stay in the correct currency.",
+                        "Currency exchange between servers requires a pre-funded liquidity pool. " +
+                        "Each pool holds both servers' currencies and is managed by their CBs. " +
+                        "If you get an error about insufficient liquidity, ask the issuing server's CB to run `/forex pool deposit`.",
                     inline: false
                 }
             )

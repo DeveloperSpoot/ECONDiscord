@@ -52,38 +52,41 @@ module.exports = {
             )
         );
 
-        // ── 2. Foreign Reserves ───────────────────────────────────────────────
+        // ── 2. Foreign Reserves & Liquidity Pools ─────────────────────────────
         embeds.push(new EmbedBuilder()
-            .setTitle("🌐  Foreign Reserves")
+            .setTitle("🌐  Foreign Reserves & Liquidity Pools")
             .setColor("Blue")
             .setDescription(
-                "Reserves are holdings of another server's currency, accumulated **only through CB bond purchases**. " +
-                "Each bond you buy creates a reserve entry that inflates the issuer's C_n, weakening their currency. " +
-                "Reserves unwind automatically when the bond matures and is redeemed."
+                "Cross-server money flows are mediated by **nostro/vostro liquidity pools** — one pool per server pair. " +
+                "Each pool holds both currencies and acts as a buffer for exchanges and bond purchases. " +
+                "Because money moves within the same server's C_n domain, exchange rates are not distorted by transfers."
             )
             .addFields(
                 {
                     name: "📋  Commands",
                     value:
-                        "`/centralbank reserves view` — List all foreign currency holdings and current exchange rates.",
+                        "`/centralbank reserves view` — View all liquidity pools and active CB bond holdings (mark-to-market).\n" +
+                        "`/forex pool deposit target-server: amount:` — Deposit domestic CB funds into the pool with another server.\n" +
+                        "`/forex pool withdraw target-server: amount:` — Withdraw your side of the pool back to CB.\n" +
+                        "`/forex pool view` — See all pools and their current balances.",
                     inline: false
                 },
                 {
-                    name: "📐  How Reserves Affect Exchange Rates",
+                    name: "💧  How the Pool Works",
                     value:
-                        "Every unit of Server B's currency held by ANY other server counts toward Server B's **C_n** (total circulation).\n" +
-                        "Since `S = activity / C_n`, a larger C_n means a weaker currency.\n\n" +
-                        "**Holding bonds** sustains C_n pressure on the issuer until maturity.\n" +
-                        "**Bond maturity & redemption** unwinds the reserve, restoring their C_n.",
+                        "**Seeding:** Your CB deposits A$ into the A-B pool from cbBalance. C_n unchanged — pool balances are included in C_n.\n\n" +
+                        "**Exchange:** User's A$ → pool A-side (C_n unchanged) → pool B-side releases B$ → user (C_n unchanged).\n\n" +
+                        "**Bond purchase:** CB A's costInHome → pool A-side → pool B-side releases purchasePrice → B's treasury (C_n unchanged).\n\n" +
+                        "If the pool runs out of the target currency, exchanges and bond purchases fail until the CB refills it.",
                     inline: false
                 },
                 {
                     name: "🛡️  Currency Defence",
                     value:
-                        "Your C_n is inflated if foreign CBs hold bonds you issued. Options:\n\n" +
-                        "Tax citizens → treasury → `/centralbank transfer` Treasury → CB → `/centralbank destroy` → C_n drops.\n\n" +
-                        "Reserve pressure from bond-holding CBs naturally unwinds when bonds mature. " +
-                        "Maintaining a healthy economy ensures issuers can redeem on schedule.",
+                        "Currency strength (`S = activity / C_n`) is now driven by real economic activity, not transfer mechanics.\n\n" +
+                        "To strengthen: `/centralbank destroy` — reduces C_n directly.\n" +
+                        "To accumulate foreign exposure: buy foreign bonds (pool-settled), or deposit into cross-server pools.\n" +
+                        "Pool liquidity management becomes a tool of economic statecraft.",
                     inline: false
                 }
             )
@@ -111,21 +114,21 @@ module.exports = {
                     name: "⚙️  How CB Bond Purchases Work",
                     value:
                         "When your CB buys a bond from Server B:\n" +
+                        "• A **liquidity pool** for the A-B pair must exist (seed it with `/forex pool deposit` first)\n" +
                         "• Your `cbBalance` decreases by `costInHome` — the purchase price **converted to your currency** at the live FOREX rate\n" +
-                        "• Server B's treasury receives `purchasePrice` in their own currency\n" +
-                        "• A `ForexReserves` entry is created — **Server B's C_n increases** (their currency weakens)\n" +
-                        "• At maturity, Server B pays back `faceValue`, **converted to your currency** at the then-current rate\n" +
-                        "• The reserve position is unwound on redemption\n\n" +
+                        "• `costInHome` enters the pool's A-side; `purchasePrice` exits the pool's B-side → Server B's treasury\n" +
+                        "• **Neither server's C_n changes** — pool balances are included in both C_ns\n" +
+                        "• At maturity, Server B pays back `faceValue`, **converted to your currency** at the then-current rate\n\n" +
                         "Bond IDs are found via `/bonds list` (public) or `/treasury bonds list` on the issuing server.",
                     inline: false
                 },
                 {
                     name: "⚔️  Bond Strategy",
                     value:
-                        "**Offensive:** Buy bonds of a target → inflates their C_n (weakens currency) AND earns yield. Hold until maturity for maximum pressure.\n" +
+                        "**Offensive:** Buy bonds of a target → drains their pool's liquidity (harder for others to get their currency) AND earns yield.\n" +
                         "**Cooperative:** Buy bonds of an ally → funds their economy + aligns incentives (you want them stable so they can repay).\n" +
-                        "**Diplomatic transfer:** Use `/centralbank bonds transfer` to hand a bond to another CB — useful for alliances, debt settlement, or restructuring reserves without liquidation. C_n pressure on the issuer is unchanged; it just moves from your reserves to theirs.\n" +
-                        "**Risk:** If the issuer defaults, the reserve unwinds but you lose the face value premium.",
+                        "**Diplomatic transfer:** Use `/centralbank bonds transfer` to hand a bond to another CB — useful for alliances, debt settlement, or restructuring holdings without liquidation.\n" +
+                        "**Risk:** If the issuer defaults you lose the face value premium. If the pool runs dry, bond purchases block — keep pools funded.",
                     inline: false
                 }
             )

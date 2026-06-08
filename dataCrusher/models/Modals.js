@@ -21,6 +21,7 @@ const SalaryReceipt = require("./SalaryReceipt")
 const ActivityLog = require("./ActivityLog")
 const ForexReserves = require("./ForexReserves")
 const TreasuryBonds = require("./TreasuryBonds")
+const ForexPool = require("./ForexPool")
 
 module.exports = {
     DiscordUsers: DiscordUsers,
@@ -45,5 +46,6 @@ module.exports = {
     SalaryReceipt: SalaryReceipt,
     ActivityLog: ActivityLog,
     ForexReserves: ForexReserves,
-    TreasuryBonds: TreasuryBonds
+    TreasuryBonds: TreasuryBonds,
+    ForexPool: ForexPool
 }

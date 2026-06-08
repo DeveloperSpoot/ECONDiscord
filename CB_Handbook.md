@@ -100,69 +100,78 @@ Moves funds between the CB and Treasury. Two directions:
 
 ---
 
-# 6. Foreign Reserves
+# 6. Foreign Reserves & Liquidity Pools
 
-Foreign reserves are holdings of **another server's currency**. They are accumulated **only through CB bond purchases** — there is no direct reserve buy/sell mechanism. Each bond purchase creates a reserve entry that inflates the issuer's `C_n` until the bond matures.
+Cross-server money flows are mediated by **nostro/vostro liquidity pools** — one pool per server pair. Each pool holds both servers' currencies and acts as a buffer for exchanges and bond purchases. Because money moves within the same server's C_n domain, the strength formula is not distorted by transfers.
 
 ## Commands
 
 | Command | Description |
 |---|---|
-| `/centralbank reserves view` | List all foreign currency holdings and current exchange rates |
+| `/centralbank reserves view` | View all liquidity pools and active CB bond holdings (mark-to-market) |
+| `/forex pool deposit target-server: amount:` | Deposit domestic CB funds into the pool with another server |
+| `/forex pool withdraw target-server: amount:` | Withdraw your side of the pool back to CB |
+| `/forex pool view` | See all pools and their current balances |
 
-## How Reserves Affect Exchange Rates
+## How the Pool Works
 
-Every unit of Server B's currency held as reserves by **any** other server counts toward Server B's total circulation (`C_n`). Since the strength formula is:
+**Seeding:** Your CB runs `/forex pool deposit target-server:B amount:X`. `X` moves from your `cbBalance` into the pool's A-side. Since pool balances are included in `C_n`, your `C_n` is unchanged.
 
-$$S = \frac{\alpha(M + V) + \beta E}{C_n}$$
+**Exchange:** A user running `/forex exchange amount:X target-server:B` causes:
+- X A$ moves from their account → pool A-side (C_n of A unchanged)
+- Equivalent B$ moves from pool B-side → their B-server account (C_n of B unchanged)
 
-a larger `C_n` means a weaker currency. Bond purchases are the mechanism for building reserve positions.
+**If the pool is empty:** Exchanges and bond purchases fail until a CB refills it.
 
 ## Currency Attack Strategy
 
 1. Accumulate CB funds (print, or receive incoming bond proceeds).
-2. `/centralbank bonds buy` — purchase bonds from the target server.
-3. Hold them until maturity — the target's `C_n` stays inflated and their exchange rate stays weak.
-4. You also earn yield on maturity, making this profitable as well as geopolitically effective.
+2. Ensure a pool exists with the target (`/forex pool deposit`).
+3. `/centralbank bonds buy` — purchase bonds from the target server.
+4. Bond proceeds flow into the target's treasury via the pool (pool-settled, C_n neutral).
+5. At maturity you receive face value (with yield) back through the pool.
+6. Holding many bonds drains the target's pool liquidity — making it harder for others to exchange into their currency — while earning you yield.
 
 ## Currency Defence Strategy
 
-If foreign CBs are holding bonds you issued, your `C_n` is inflated. Options:
+Currency strength (`S = activity / C_n`) is driven by real economic activity, not transfer mechanics. To strengthen:
 
 1. Tax citizens → funds go to Treasury.
 2. `/centralbank transfer` Treasury → CB.
 3. `/centralbank destroy` → `C_n` drops → currency strengthens.
 
-Reserve pressure from bond-holding CBs naturally unwinds when bonds mature and are redeemed.
+Maintaining pool liquidity is optional but enables trade. Refusing to seed a pool with another server is a form of economic isolation.
 
 ---
 
 # 7. Sovereign Bonds (CB as Buyer)
 
-The CB can purchase bonds issued by other servers' Treasuries. CB bond holdings count as **reserve assets** — they inflate the issuer's `C_n` the same way regular reserves do, but they earn a **yield** (you receive more than you paid at maturity).
+The CB can purchase bonds issued by other servers' Treasuries. CB bond holdings are **reserve assets** — settled via the liquidity pool, earning a **yield** (you receive more than you paid at maturity).
 
 | Command | Description |
 |---|---|
-| `/centralbank bonds buy bond-id:` | Purchase an available bond using CB funds |
+| `/centralbank bonds buy bond-id:` | Purchase an available bond using CB funds (pool must exist) |
+| `/centralbank bonds transfer bond-id: to-guild:` | Transfer a CB-held bond to another server's CB (free) |
 | `/centralbank bonds holdings` | View all bonds this CB holds, maturity dates, and face values |
 
 ## How CB Bond Purchases Work
 
 When your CB buys a bond from Server B:
 
-1. Your `cbBalance` decreases by the **purchase price converted to your currency** at the live FOREX rate.
-2. Server B's treasury receives the purchase price in their own currency immediately.
-3. A foreign reserve entry is created — **Server B's `C_n` increases** (their currency weakens).
-4. At maturity, Server B pays back the **face value, converted to your currency** at the then-current rate.
-5. The reserve position unwinds on redemption (their `C_n` returns to normal).
+1. A **liquidity pool** for the A-B pair must exist — seed it first with `/forex pool deposit`.
+2. Your `cbBalance` decreases by `costInHome` — the purchase price **converted to your currency** at the live FOREX rate.
+3. `costInHome` enters the pool's A-side; `purchasePrice` exits the pool's B-side → Server B's treasury immediately.
+4. **Neither server's C_n changes** — the settlement is pool-mediated.
+5. At maturity, Server B pays back the **face value, converted to your currency** at the then-current rate.
 
 ## Bond Strategy
 
 | Approach | Effect |
 |---|---|
-| **Offensive** | Buy bonds of a target → inflates their `C_n` (weakens currency) AND earns yield |
+| **Offensive** | Buy bonds of a target → drains their pool liquidity (limits others' access to their currency) AND earns yield |
 | **Cooperative** | Buy bonds of an ally → funds their economy + aligns incentives (you want them stable so they can repay) |
-| **Risk** | If the issuer defaults, the reserve unwinds but you lose the face value premium |
+| **Diplomatic** | Use `/centralbank bonds transfer` to hand a bond to another CB — useful for alliances or debt restructuring |
+| **Risk** | If the issuer defaults, you lose the face value premium. If the pool runs dry, bond purchases block. |
 
 ---
 
@@ -179,7 +188,7 @@ $$S = \frac{\alpha(M + V) + \beta E}{C_n}$$
 | $E$ | Transactions in the last 30 days | $\beta = 2.0$ |
 | $C_n$ | Total money in circulation | — |
 
-**What counts in $C_n$:** All personal wallet and bank balances, all business accounts, all department balances, the Treasury balance, the CB balance, and any units of your currency held as reserves by other servers.
+**What counts in $C_n$:** All personal wallet and bank balances, all business accounts, all department balances, the Treasury balance, the CB balance, and any units of your currency sitting in cross-server liquidity pools.
 
 ## Exchange Rate
 
@@ -202,7 +211,7 @@ New servers with no recorded activity get estimated metrics based on their regis
 
 2. **C_n is your primary lever.** Everything that affects exchange rates goes through the circulation figure. Control C_n to control your rate.
 
-3. **Bonds are a dual-use weapon.** Buying another server's bonds inflates their C_n (weakening their currency) while also earning you yield at maturity. The attack and the profit come together.
+3. **Bonds are a dual-use weapon.** Buying another server's bonds drains their pool's liquidity (restricting cross-server currency access) while earning you yield at maturity. Pool management and bond strategy are intertwined.
 
 4. **Bonds earn yield but carry risk.** A defaulted bond loses the face-value premium. Only buy bonds from servers you believe are economically stable or ones you can afford to pressure.
 
@@ -220,9 +229,13 @@ New servers with no recorded activity get estimated metrics based on their regis
 | Remove money from circulation | `/centralbank destroy amount: memo:` |
 | Move money CB → Treasury | `/centralbank transfer direction:CB→Treasury amount:` |
 | Move money Treasury → CB | `/centralbank transfer direction:Treasury→CB amount:` |
-| View foreign reserve holdings | `/centralbank reserves view` |
+| View reserves, pools & bond holdings | `/centralbank reserves view` |
 | Buy a sovereign bond | `/centralbank bonds buy bond-id:` |
+| Transfer CB bond to another CB | `/centralbank bonds transfer bond-id: to-guild:` |
 | View CB bond holdings | `/centralbank bonds holdings` |
+| Deposit into liquidity pool | `/forex pool deposit target-server: amount:` |
+| Withdraw from liquidity pool | `/forex pool withdraw target-server: amount:` |
+| View pool balances | `/forex pool view` |
 | View exchange rates | `/forex rate target-server:` |
 | View strength metrics | `/forex strength` |
 | Execute currency exchange | `/forex exchange amount: target-server:` |

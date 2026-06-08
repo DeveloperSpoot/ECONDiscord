@@ -14,7 +14,7 @@ module.exports = {
             .setColor("Gold")
             .setDescription("Government operational account. Funds departments, manages businesses, collects taxes, issues bonds.\n**Access:** `/authorize add @user` (owner only). Admins always have access.")
             .addFields(
-                { name: "📊  Info", value: "`/treasury balance` · `/treasury statistics`", inline: false },
+                { name: "📊  Info", value: "`/treasury balance` · `/treasury balance-all` · `/treasury statistics`", inline: false },
                 {
                     name: "⚙️  Config",
                     value:
@@ -170,8 +170,21 @@ module.exports = {
             .setColor("Gold")
             .addFields(
                 {
-                    name: "Authorization",
-                    value: "`/authorize add|remove user:@user` — Grant/revoke treasury access (owner only). Separate from CB auth.",
+                    name: "Full Treasury Authorization",
+                    value: "`/authorize add|remove user:@user` — Grant/revoke full treasury access (owner only). Separate from CB auth.",
+                    inline: false
+                },
+                {
+                    name: "Business Manager Authorization",
+                    value:
+                        "`/treasury business-auth add user:@user` — Grant business manager access (owner only).\n" +
+                        "`/treasury business-auth remove user:@user` — Revoke business manager access.\n\n" +
+                        "Business managers can run `/treasury add-business`, `/treasury edit-business`, and `/treasury remove-business` **without** having full treasury access. They cannot access treasury balance, taxes, departments, or other treasury settings.",
+                    inline: false
+                },
+                {
+                    name: "Public Commands",
+                    value: "`/treasury balance-all` — Anyone can view all government balances (treasury, CB, all departments). No auth required.",
                     inline: false
                 },
                 {

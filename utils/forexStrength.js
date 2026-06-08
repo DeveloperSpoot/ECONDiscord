@@ -42,4 +42,15 @@ function convertCurrency(amountA, strengthA, strengthB) {
     return amountA * (strengthA / strengthB);
 }
 
-module.exports = { serverStrength, convertCurrency, ALPHA, BETA, M_PER_MEMBER, E_PER_MEMBER };
+/**
+ * Canonical ordering for a server pair, ensuring one pool row per pair.
+ * @param {string} id1
+ * @param {string} id2
+ * @returns {[string, string, boolean]} [guildA, guildB, id1IsA]
+ */
+function canonicalPair(id1, id2) {
+    if (id1 < id2) return [id1, id2, true];
+    return [id2, id1, false];
+}
+
+module.exports = { serverStrength, convertCurrency, canonicalPair, ALPHA, BETA, M_PER_MEMBER, E_PER_MEMBER };

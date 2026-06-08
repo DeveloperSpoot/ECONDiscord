@@ -3,7 +3,7 @@ const SQL = require("../dataCrusher/Server");
 const { ErrorEmbed } = require("../utils/embedUtil");
 const { GuildHQ, RetrieveData, NotificationHQ, CreateData, PermManager } = require("../dataCrusher/Headquarters");
 const { getGuildStrength } = require("../dataCrusher/services/forexService");
-const { convertCurrency, ALPHA, BETA } = require("../utils/forexStrength");
+const { convertCurrency, canonicalPair, ALPHA, BETA } = require("../utils/forexStrength");
 const { Op } = require("sequelize");
 const { LogGeneral } = require("../dataCrusher/services/guild");
 
@@ -347,17 +347,18 @@ module.exports = {
             });
             const totalPrinted = Number(printedResult ?? 0);
 
-            const reserves = await SQL.models.ForexReserves.findAll({
-                where: { guild: guildId },
+            // Mark-to-market value of active CB-held bonds as reserve proxy
+            const { Op: ReportOp } = require("sequelize");
+            const activeBonds = await SQL.models.TreasuryBonds.findAll({
+                where: { holderGuild: guildId, holderType: 'cb', status: 'active' },
                 raw: true
             });
             let reserveValueDomestic = 0;
-            for (const r of reserves) {
-                if (Number(r.amount) <= 0) continue;
+            for (const b of activeBonds) {
                 try {
-                    const foreignStats = await getGuildStrength(r.foreignGuild);
-                    if (foreignStats.strength > 0 && strength > 0) {
-                        reserveValueDomestic += convertCurrency(Number(r.amount), foreignStats.strength, strength);
+                    const issuerStats = await getGuildStrength(b.issuerGuild);
+                    if (issuerStats.strength > 0 && strength > 0) {
+                        reserveValueDomestic += convertCurrency(Number(b.faceValue), issuerStats.strength, strength);
                     }
                 } catch { /* skip */ }
             }
@@ -503,39 +504,87 @@ module.exports = {
 
         // ── reserves view ─────────────────────────────────────────────────────
         if (sub === "reserves view") {
-            const reserves = await SQL.models.ForexReserves.findAll({
-                where: { guild: guildId },
+            const { Op: ReservesOp } = require("sequelize");
+            const homeStats = await getGuildStrength(guildId);
+            const embeds = [];
+
+            // Section 1: Liquidity pools
+            const pools = await SQL.models.ForexPool.findAll({
+                where: { [ReservesOp.or]: [{ guildA: guildId }, { guildB: guildId }] },
                 raw: true
             });
 
-            if (!reserves || reserves.length === 0) {
+            let poolDesc = "";
+            let totalPoolValueDomestic = 0;
+            for (const p of pools) {
+                const homeIsA = p.guildA === guildId;
+                const partnerGuildId = homeIsA ? p.guildB : p.guildA;
+                const partnerGuild = interaction.client.guilds.cache.get(partnerGuildId);
+                const partnerName = partnerGuild?.name ?? partnerGuildId;
+                const homePoolBal = homeIsA ? Number(p.balanceA) : Number(p.balanceB);
+                const partnerPoolBal = homeIsA ? Number(p.balanceB) : Number(p.balanceA);
+
+                let rateStr = "N/A";
+                let partnerSymbol = '$';
+                try {
+                    const partnerRecord = await SQL.models.Guilds.findByPk(partnerGuildId, { raw: true });
+                    partnerSymbol = partnerRecord?.customCurrency ?? '$';
+                    const partnerStats = await getGuildStrength(partnerGuildId);
+                    if (partnerStats.strength > 0 && homeStats.strength > 0) {
+                        rateStr = convertCurrency(1, homeStats.strength, partnerStats.strength).toFixed(6);
+                        totalPoolValueDomestic += convertCurrency(partnerPoolBal, partnerStats.strength, homeStats.strength);
+                    }
+                } catch { /* skip */ }
+
+                poolDesc += `**↔ ${partnerName}**\nYour side: ${await guildManager.formatMoney(homePoolBal)} · Partner side: ${partnerPoolBal.toFixed(2)} ${partnerSymbol} · Rate: 1 : ${rateStr}\n\n`;
+            }
+
+            // Section 2: Active CB-held bonds (mark-to-market)
+            const activeBonds = await SQL.models.TreasuryBonds.findAll({
+                where: { holderGuild: guildId, holderType: 'cb', status: 'active' },
+                raw: true
+            });
+
+            let bondDesc = "";
+            let totalBondValueDomestic = 0;
+            for (const b of activeBonds) {
+                const issuerGuild = interaction.client.guilds.cache.get(b.issuerGuild);
+                const issuerName = issuerGuild?.name ?? b.issuerGuild;
+                const maturesStr = b.maturesAt ? `<t:${Math.floor(new Date(b.maturesAt).getTime() / 1000)}:R>` : "—";
+                let markToMarket = Number(b.faceValue);
+                let issuerSymbol = '$';
+                try {
+                    const issuerRecord = await SQL.models.Guilds.findByPk(b.issuerGuild, { raw: true });
+                    issuerSymbol = issuerRecord?.customCurrency ?? '$';
+                    const issuerStats = await getGuildStrength(b.issuerGuild);
+                    if (issuerStats.strength > 0 && homeStats.strength > 0) {
+                        markToMarket = convertCurrency(Number(b.faceValue), issuerStats.strength, homeStats.strength);
+                        totalBondValueDomestic += markToMarket;
+                    }
+                } catch { /* skip */ }
+
+                bondDesc += `**${b.IDENT.slice(0, 8)}...** from **${issuerName}** · Face: ${Number(b.faceValue).toFixed(2)} ${issuerSymbol} · MTM: ${await guildManager.formatMoney(markToMarket)} · Matures: ${maturesStr}\n`;
+            }
+
+            if (!poolDesc && !bondDesc) {
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Yellow").setDescription("No foreign currency reserves held.")]
+                    embeds: [new EmbedBuilder().setColor("Yellow").setDescription("No liquidity pools or CB bond holdings. Use `/forex pool deposit` to establish a pool.")]
                 });
             }
 
-            const homeStats = await getGuildStrength(guildId);
-            let desc = "";
-
-            for (const r of reserves) {
-                const fg = interaction.client.guilds.cache.get(r.foreignGuild);
-                const name = fg?.name ?? r.foreignGuild;
-                let rateStr = "N/A";
-                try {
-                    const foreignStats = await getGuildStrength(r.foreignGuild);
-                    if (foreignStats.strength > 0 && homeStats.strength > 0) {
-                        const rate = convertCurrency(1, foreignStats.strength, homeStats.strength);
-                        rateStr = rate.toFixed(6);
-                    }
-                } catch { /* skip */ }
-                desc += `**${name}** — ${Number(r.amount).toFixed(2)} units · 1 unit = ${rateStr} domestic\n`;
-            }
-
             const embed = new EmbedBuilder()
-                .setTitle(`${interaction.guild.name} — Foreign Reserves`)
+                .setTitle(`${interaction.guild.name} — Reserves & Liquidity`)
                 .setColor("Blue")
-                .setDescription(desc)
                 .setTimestamp();
+
+            if (poolDesc) {
+                embed.addFields({ name: "💧  Liquidity Pools", value: poolDesc || "None", inline: false });
+                embed.addFields({ name: "Pool Value (domestic MTM)", value: await guildManager.formatMoney(totalPoolValueDomestic), inline: true });
+            }
+            if (bondDesc) {
+                embed.addFields({ name: "📜  CB Bond Holdings (mark-to-market)", value: bondDesc, inline: false });
+                embed.addFields({ name: "Total Bond MTM Value", value: await guildManager.formatMoney(totalBondValueDomestic), inline: true });
+            }
 
             return interaction.editReply({ embeds: [embed] });
         }
@@ -585,11 +634,40 @@ module.exports = {
             const now = new Date();
             const maturesAt = new Date(now.getTime() + bond.maturityDays * 24 * 60 * 60 * 1000);
 
-            // Debit buyer CB by costInHome (domestic currency)
-            await SQL.models.Guilds.update(
-                { cbBalance: Number(guildRecord.cbBalance) - costInHome },
-                { where: { IDENT: guildId } }
-            );
+            // Verify pool has enough issuer currency
+            const [poolGuildA, poolGuildB, homeIsA] = canonicalPair(guildId, bond.issuerGuild);
+            const pool = await SQL.models.ForexPool.findOne({ where: { guildA: poolGuildA, guildB: poolGuildB } });
+
+            const issuerGuildObjPre = interaction.client.guilds.cache.get(bond.issuerGuild);
+            if (!pool) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
+                        `No liquidity pool exists for this pair.\nRun \`/forex pool deposit\` targeting **${issuerGuildObjPre?.name ?? bond.issuerGuild}** to establish a pool first.`
+                    )]
+                });
+            }
+
+            const issuerPoolBalance = homeIsA ? Number(pool.balanceB) : Number(pool.balanceA);
+            const issuerRecordPre = await SQL.models.Guilds.findByPk(bond.issuerGuild, { raw: true });
+            const issuerSymbolPre = issuerRecordPre?.customCurrency ?? '$';
+            if (issuerPoolBalance < purchasePrice) {
+                return interaction.editReply({
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription(
+                        `Pool has insufficient **${issuerSymbolPre}** liquidity.\nPool holds: ${issuerPoolBalance.toFixed(2)} ${issuerSymbolPre} · Needed: ${purchasePrice.toFixed(2)} ${issuerSymbolPre}\n` +
+                        `Run \`/forex pool deposit\` to add more, or ask **${issuerGuildObjPre?.name ?? bond.issuerGuild}**'s CB to fund the pool.`
+                    )]
+                });
+            }
+
+            // Debit CB, route through pool, credit issuer treasury
+            await SQL.models.Guilds.decrement('cbBalance', { by: costInHome, where: { IDENT: guildId } });
+            if (homeIsA) {
+                await pool.increment('balanceA', { by: costInHome });
+                await pool.decrement('balanceB', { by: purchasePrice });
+            } else {
+                await pool.increment('balanceB', { by: costInHome });
+                await pool.decrement('balanceA', { by: purchasePrice });
+            }
 
             // Credit issuer treasury by purchasePrice (issuer's currency)
             const issuerRecord = await SQL.models.Guilds.findByPk(bond.issuerGuild, { raw: true });
@@ -607,13 +685,6 @@ module.exports = {
                 maturesAt,
                 status: "active"
             });
-
-            // Bond purchase counts as a reserve — upsert ForexReserves
-            const [reserveRow] = await SQL.models.ForexReserves.findOrCreate({
-                where: { guild: guildId, foreignGuild: bond.issuerGuild },
-                defaults: { guild: guildId, foreignGuild: bond.issuerGuild, amount: 0 }
-            });
-            await reserveRow.increment("amount", { by: purchasePrice });
 
             await SQL.models.AdvTransactionLogs.create({
                 guild: guildId, amount: costInHome,
@@ -640,7 +711,7 @@ module.exports = {
                     { name: "Face Value", value: `${Number(bond.faceValue).toFixed(2)} ${issuerCurrency}`, inline: true },
                     { name: "Yield", value: `${(bond.yieldRate * 100).toFixed(2)}%`, inline: true },
                     { name: "Matures", value: `<t:${Math.floor(maturesAt.getTime() / 1000)}:R>`, inline: true },
-                    { name: "Reserve Effect", value: `+${purchasePrice.toFixed(2)} ${issuerCurrency} in ${issuerGuildObj?.name ?? bond.issuerGuild}'s C_n`, inline: false }
+                    { name: "Pool Settlement", value: `Routed via liquidity pool — neither server's C_n changed.`, inline: false }
                 )
                 .setTimestamp();
 
@@ -677,24 +748,6 @@ module.exports = {
                 });
             }
 
-            const purchasePrice = Number(bond.purchasePrice);
-
-            // Rebalance ForexReserves: remove from source CB, add to destination CB
-            const sourceReserve = await SQL.models.ForexReserves.findOne({
-                where: { guild: guildId, foreignGuild: bond.issuerGuild }
-            });
-            if (sourceReserve) {
-                const newAmt = Number(sourceReserve.amount) - purchasePrice;
-                if (newAmt <= 0) await sourceReserve.destroy();
-                else await sourceReserve.update({ amount: newAmt });
-            }
-
-            const [destReserve] = await SQL.models.ForexReserves.findOrCreate({
-                where: { guild: targetGuildId, foreignGuild: bond.issuerGuild },
-                defaults: { guild: targetGuildId, foreignGuild: bond.issuerGuild, amount: 0 }
-            });
-            await destReserve.increment("amount", { by: purchasePrice });
-
             await bond.update({ holderGuild: targetGuildId });
 
             const issuerGuildObj = interaction.client.guilds.cache.get(bond.issuerGuild);
@@ -707,8 +760,7 @@ module.exports = {
                     { name: "From CB", value: interaction.guild.name, inline: true },
                     { name: "To CB", value: targetGuild.name, inline: true },
                     { name: "Face Value", value: await guildManager.formatMoney(bond.faceValue), inline: true },
-                    { name: "Matures", value: `<t:${Math.floor(new Date(bond.maturesAt).getTime() / 1000)}:R>`, inline: true },
-                    { name: "Reserve Effect", value: `C_n pressure on ${issuerGuildObj?.name ?? bond.issuerGuild} transferred — net change: 0`, inline: false }
+                    { name: "Matures", value: `<t:${Math.floor(new Date(bond.maturesAt).getTime() / 1000)}:R>`, inline: true }
                 )
                 .setFooter({ text: "Free transfer — no payment." })
                 .setTimestamp();

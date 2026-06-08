@@ -438,16 +438,49 @@ module.exports = {
                                 .setRequired(true))
                 )
 
-                // Disengaging 
+                // Disengaging
                 .addSubcommand(subCmd =>
                     subCmd.setName("disengage")
                         .setDescription("Sever entanglement with all servers. This Restores The Treasury And Economy For This Server.")
                 )
+        )
+
+        // Balance-All (public)
+        .addSubcommand(subCmd =>
+            subCmd.setName('balance-all')
+                .setDescription('View all government balances — treasury, CB, and every department. Public.')
+        )
+
+        // Business-Auth management (owner-only)
+        .addSubcommandGroup(group =>
+            group.setName('business-auth')
+                .setDescription('Manage business manager authorization (server owner only).')
+                .addSubcommand(sub =>
+                    sub.setName('add')
+                        .setDescription('Grant a user business manager access (can create/edit/remove businesses).')
+                        .addUserOption(opt =>
+                            opt.setName('user').setDescription('User to authorize.').setRequired(true)))
+                .addSubcommand(sub =>
+                    sub.setName('remove')
+                        .setDescription('Revoke business manager access from a user.')
+                        .addUserOption(opt =>
+                            opt.setName('user').setDescription('User to deauthorize.').setRequired(true)))
         ),
 
         //  AUTOCOMPLETE
     async autocomplete(interaction) {
-        if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+        const _acSub = interaction.options.getSubcommand(false);
+        const _acBusinessSubcmds = new Set(['add-business', 'remove-business', 'edit-business']);
+        // Business-authorized users may autocomplete business subcommands
+        if (_acBusinessSubcmds.has(_acSub)) {
+            const [_acTAuth, _acBAuth] = await Promise.all([
+                PermManager.Treasury.checkAuthorization(interaction, interaction.user),
+                PermManager.Business.checkAuthorization(interaction, interaction.user)
+            ]);
+            if (!_acTAuth && !_acBAuth) {
+                return await interaction.respond([{ name: "Error, You are not authorized.", value: "Error" }]);
+            }
+        } else if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
             return await interaction.respond([{
                 name: "Error, You are not authorized manage the Treasury.",
                 value: "Error"
@@ -526,7 +559,89 @@ module.exports = {
             return await ErrorEmbed(interaction, "Sub Servers of an Entanglement may not manage the treasury. Treasury settings changes and interactions must be conducted on the main server.")
         }
 
-        if (await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
+        const _group = interaction.options.getSubcommandGroup(false);
+        const _sub = interaction.options.getSubcommand(false);
+        const _fullSub = _group ? `${_group} ${_sub}` : _sub;
+
+        // ── /treasury balance-all (public — no auth required) ─────────────────
+        if (_fullSub === 'balance-all') {
+            await interaction.deferReply({});
+            const guildRecordAll = await SQL.models.Guilds.findByPk(interaction.IDENT, { raw: true });
+            const gmAll = new GuildHQ(interaction);
+            const treasury = Number(guildRecordAll?.balance ?? 0);
+            const cbBalance = Number(guildRecordAll?.cbBalance ?? 0);
+            const departments = await SQL.models.Department.findAll({
+                where: { GuildIDENT: interaction.IDENT },
+                order: [['name', 'ASC']],
+                raw: true
+            });
+
+            const depFields = [];
+            for (const dep of departments) {
+                depFields.push({ name: dep.name, value: await gmAll.formatMoney(Number(dep.balance)), inline: true });
+            }
+            const depTotal = departments.reduce((sum, d) => sum + Number(d.balance), 0);
+            const grandTotal = treasury + cbBalance + depTotal;
+
+            const balAllEmbed = new discord.EmbedBuilder()
+                .setTitle(`${interaction.guild.name} — Government Balances`)
+                .setColor("Gold")
+                .addFields(
+                    { name: '🏛️  Treasury', value: await gmAll.formatMoney(treasury), inline: true },
+                    { name: '🏦  Central Bank', value: await gmAll.formatMoney(cbBalance), inline: true }
+                );
+            if (depFields.length > 0) {
+                balAllEmbed.addFields({ name: '​', value: '**Departments**', inline: false }, ...depFields);
+            }
+            balAllEmbed.addFields({ name: '​', value: '​', inline: false }, { name: 'Total Government Funds', value: await gmAll.formatMoney(grandTotal), inline: false });
+            balAllEmbed.setFooter({ text: 'Includes treasury, CB, and all departments.' }).setTimestamp();
+
+            return interaction.editReply({ embeds: [balAllEmbed] });
+        }
+
+        // ── /treasury business-auth add/remove (server owner only) ────────────
+        if (_fullSub === 'business-auth add' || _fullSub === 'business-auth remove') {
+            await interaction.deferReply({});
+            if (interaction.user.id !== interaction.guild.ownerId) {
+                return interaction.editReply({
+                    embeds: [new discord.EmbedBuilder().setColor("Red").setDescription("Only the server owner can manage business manager authorization.")]
+                });
+            }
+            const bizAuthUser = interaction.options.getUser('user');
+            if (_fullSub === 'business-auth add') {
+                await PermManager.Business.authorize(interaction, bizAuthUser);
+                await interaction.editReply({
+                    embeds: [new discord.EmbedBuilder().setColor("Green").setTitle("Business Auth Granted")
+                        .setDescription(`<@${bizAuthUser.id}> can now create, edit, and remove businesses.`).setTimestamp()]
+                });
+                await LogGeneral(interaction, 'Green', 'Business Auth Granted', `<@${interaction.user.id}> granted business manager access to <@${bizAuthUser.id}>.`).catch(console.error);
+            } else {
+                await PermManager.Business.deauthorize(interaction, bizAuthUser);
+                await interaction.editReply({
+                    embeds: [new discord.EmbedBuilder().setColor("Orange").setTitle("Business Auth Removed")
+                        .setDescription(`<@${bizAuthUser.id}>'s business manager access has been revoked.`).setTimestamp()]
+                });
+                await LogGeneral(interaction, 'Orange', 'Business Auth Removed', `<@${interaction.user.id}> revoked business manager access from <@${bizAuthUser.id}>.`).catch(console.error);
+            }
+            return;
+        }
+
+        // ── Business subcommands: accept treasury OR business-manager auth ─────
+        const _businessSubcmds = new Set(['add-business', 'remove-business', 'edit-business']);
+        let _passedAuth = false;
+        if (_businessSubcmds.has(_sub)) {
+            const [_tAuth, _bAuth] = await Promise.all([
+                PermManager.Treasury.checkAuthorization(interaction, interaction.user),
+                PermManager.Business.checkAuthorization(interaction, interaction.user)
+            ]);
+            if (!_tAuth && !_bAuth) {
+                return await ErrorEmbed(interaction, "You are not authorized to manage businesses.");
+            }
+            _passedAuth = true;
+        }
+
+        // ── All other subcommands: require treasury auth ───────────────────────
+        if (!_passedAuth && await PermManager.Treasury.checkAuthorization(interaction, interaction.user) == null && interaction.user.id !== interaction.guild.ownerId) {
             return await ErrorEmbed(
                 interaction,
                 "You are not authorized manage the Treasury."
@@ -1439,13 +1554,6 @@ module.exports = {
                         : faceValue;
                     const holderRecord = await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true });
                     await SQL.models.Guilds.update({ cbBalance: Number(holderRecord.cbBalance) + faceInHolder }, { where: { IDENT: bond.holderGuild } });
-                    // Unwind ForexReserves
-                    const reserveRow = await SQL.models.ForexReserves.findOne({ where: { guild: bond.holderGuild, foreignGuild: interaction.IDENT } });
-                    if (reserveRow) {
-                        const newAmt = Number(reserveRow.amount) - Number(bond.purchasePrice);
-                        if (newAmt <= 0) await reserveRow.destroy();
-                        else await reserveRow.update({ amount: newAmt });
-                    }
                 } else if (bond.holderType === 'business' && bond.holderAccount) {
                     const businessAccount = await SQL.models.Accounts.findByPk(bond.holderAccount, { raw: true });
                     if (businessAccount) {
@@ -1497,12 +1605,6 @@ module.exports = {
                         : purchasePrice;
                     const holderRecord = await SQL.models.Guilds.findByPk(bond.holderGuild, { raw: true });
                     await SQL.models.Guilds.update({ cbBalance: Number(holderRecord.cbBalance) + priceInHolder }, { where: { IDENT: bond.holderGuild } });
-                    const reserveRow = await SQL.models.ForexReserves.findOne({ where: { guild: bond.holderGuild, foreignGuild: interaction.IDENT } });
-                    if (reserveRow) {
-                        const newAmt = Number(reserveRow.amount) - purchasePrice;
-                        if (newAmt <= 0) await reserveRow.destroy();
-                        else await reserveRow.update({ amount: newAmt });
-                    }
                 } else if (bond.holderType === 'business' && bond.holderAccount) {
                     const businessAccount = await SQL.models.Accounts.findByPk(bond.holderAccount, { raw: true });
                     if (businessAccount) {

@@ -138,6 +138,24 @@ module.exports = {
      **************************************************************************************************************/
     invalidate: async(business, interaction)=>{
         return await permissionCache.delete(`${interaction.member.id}-${business.IDENT}`);
+    },
+    // Server-level "business manager" authorization — allows managing businesses without full treasury access
+    checkAuthorization: async function(interaction, user) {
+        const User = await getGuildMember(user.id, interaction.IDENT);
+        if (interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
+        if (User === null) return null;
+        return await SQL.models.AuthorizedUsers.findOne({ where: { id: User.IDENT, type: 'business' } });
+    },
+    authorize: async function(interaction, user) {
+        const User = await getGuildMember(user.id, interaction.IDENT);
+        return await SQL.models.AuthorizedUsers.findOrCreate({
+            where: { id: User.IDENT, guild: interaction.IDENT, type: 'business' },
+            defaults: { id: User.IDENT, guild: interaction.IDENT, type: 'business' }
+        });
+    },
+    deauthorize: async function(interaction, user) {
+        const User = await getGuildMember(user.id, interaction.IDENT);
+        return await SQL.models.AuthorizedUsers.destroy({ where: { id: User.IDENT, guild: interaction.IDENT, type: 'business' } });
     }
     },
     Department: {
