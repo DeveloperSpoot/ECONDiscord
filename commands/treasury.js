@@ -639,9 +639,9 @@ module.exports = {
         // ── /treasury business-auth add/remove (server owner only) ────────────
         if (_fullSub === 'business-auth add' || _fullSub === 'business-auth remove') {
             await interaction.deferReply({});
-            if (interaction.user.id !== interaction.guild.ownerId) {
+            if (interaction.user.id !== interaction.guild.ownerId && !interaction.member.permissions.has(discord.PermissionFlagsBits.Administrator)) {
                 return interaction.editReply({
-                    embeds: [new discord.EmbedBuilder().setColor("Red").setDescription("Only the server owner can manage business manager authorization.")]
+                    embeds: [new discord.EmbedBuilder().setColor("Red").setDescription("Only the server owner or an administrator can manage business manager authorization.")]
                 });
             }
             const bizAuthUser = interaction.options.getUser('user');

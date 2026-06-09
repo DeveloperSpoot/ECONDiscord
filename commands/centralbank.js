@@ -162,9 +162,9 @@ module.exports = {
         if (sub === "authorize add" || sub === "authorize remove") {
             await interaction.deferReply({});
 
-            if (interaction.user.id !== interaction.guild.ownerId) {
+            if (interaction.user.id !== interaction.guild.ownerId && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
                 return interaction.editReply({
-                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Only the server owner can manage Central Bank authorizations.")]
+                    embeds: [new EmbedBuilder().setColor("Red").setDescription("Only the server owner or an administrator can manage Central Bank authorizations.")]
                 });
             }
 
