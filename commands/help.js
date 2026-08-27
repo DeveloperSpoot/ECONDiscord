@@ -27,8 +27,8 @@ module.exports = {
                 {name: 'Support Server', value: '[Join The Discord Server](https://discord.gg/tgg2cyYHDh)', inline: true},
                 {name: 'Vote For The Bot', value: '[Vote on Top.gg](https://top.gg/bot/1077139728538812416)', inline: true},
                 {name: 'Invite The Bot', value: '[Invite Link](https://discord.com/api/oauth2/authorize?client_id=1077139728538812416&permissions=414464723008&scope=bot)', inline: true},
-                {name: 'Forms', value: '[Report A Bug](https://discord.gg/tgg2cyYHDh) | [Make A Suggestion](https://discord.gg/tgg2cyYHDh)', inline: true}
-
+                {name: 'Forms', value: '[Report A Bug](https://discord.gg/tgg2cyYHDh) | [Make A Suggestion](https://discord.gg/tgg2cyYHDh)', inline: true},
+                {name: 'Legal', value: '[Terms of Service](https://tos.spectacledev.com) | [Privacy Policy](https://privacy.spectacledev.com)', inline: true}
             )
 
         interaction.reply({embeds: [infoEmbed], components: [row]});
