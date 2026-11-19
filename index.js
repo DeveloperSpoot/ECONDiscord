@@ -65,21 +65,29 @@ const {request} = require("undici");
 
 const client = new Client({intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], partials: [Partials.Channel]});
 
-client.commands = new Collection();
-const commandsPath = path.join(__dirname, "commands");
-const commandFiles = fs
-    .readdirSync(commandsPath)
-    .filter((file) => file.endsWith(".js"));
+const loadCommands = require('./loaders/commandLoader');
 
-const eventsPath = path.join(__dirname, "events");
+// Initialize commands
+client.commands = new Collection();
+
+// Load all commands (standalone + folder-based)
+loadCommands(client);
+
+// Load events
+const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs
     .readdirSync(eventsPath)
-    .filter((file) => file.endsWith(".js"));
+    .filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    client.commands.set(command.data.name, command);
+for (const file of eventFiles) {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args));
+    }
 }
 
 /*
@@ -339,16 +347,6 @@ client.on('guildDelete', async (guild)=>{
         console.error("SERVER-REMOVED", e)
     }
 })
-
-for (const file of eventFiles) {
-    const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args));
-    }
-}
 
 // //Updates the stats of ECON on top.gg
 // // Comment this section out if hosting.
