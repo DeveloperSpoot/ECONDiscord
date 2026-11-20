@@ -60,25 +60,38 @@ module.exports = function createCommand(commandPath, metadata) {
         });
     }
 
+    // Command Handler, routes the interactions to their actual command files, including autocomplete interactions.
+    function getHandler(interaction) {
+        const groupName = interaction.options.getSubcommandGroup(false);
+        const subcommandName = interaction.options.getSubcommand();
+
+        return groupName
+            ? groups.get(groupName)?.handlers.get(subcommandName)
+            : subcommands.get(subcommandName);
+    }
+
     // Shared execution logic
     return {
         data,
 
         async execute(interaction) {
-            const groupName = interaction.options.getSubcommandGroup(false);
-            const subcommandName = interaction.options.getSubcommand();
-
-            const handler = groupName
-                ? groups.get(groupName)?.handlers.get(subcommandName)
-                : subcommands.get(subcommandName);
+            const handler = getHandler(interaction);
 
             if (!handler) {
-                throw new Error(
-                    `Handler not found: ${metadata.name} ${groupName ?? ''} ${subcommandName}`
-                );
+                throw new Error('Subcommand handler not found.');
             }
 
             return handler.execute(interaction);
+        },
+
+        async autocomplete(interaction) {
+            const handler = getHandler(interaction);
+
+            if (!handler?.autocomplete) {
+                return interaction.respond([]);
+            }
+
+            return handler.autocomplete(interaction);
         }
     };
 };
