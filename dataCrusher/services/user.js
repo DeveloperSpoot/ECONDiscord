@@ -115,32 +115,11 @@ User.prototype = {
     getBusiness: async function(){
         let Bus = await activeBusiness.get(`${this.interaction.IDENT}-${this.interaction.user.id}`);
 
-        // if(Bus === null || typeof Bus === "undefined"){
-        //
-        //     const IDENT = await this.getIDENT()
-        //
-        //     const USER =  await SQL.models.GuildMembers.findByPk(IDENT, {raw: true});
-        //
-        //     if(USER.defaultBusiness == null) return Bus;
-        //
-        //     await activeBusiness.set(this.interaction.user.id, USER.defaultBusiness)
-        //     Bus = USER.defaultBusiness;
-        // }
         return Bus;
     },
     getDepartment: async function(){
         let Dep = await activeDepartment.get(`${this.interaction.IDENT}-${this.interaction.user.id}`);
 
-        // if(Dep === null || typeof Dep === "undefined"){
-        //
-        //     const IDENT = await this.getIDENT()
-        //
-        //     const USER =  await SQL.models.GuildMembers.findByPk(IDENT, {raw: true});
-        //
-        //     if(USER.defaultDepartment == null) return Dep;
-        //     await activeDepartment.set(this.interaction.user.id, USER.defaultDepartment)
-        //     Dep = USER.defaultDepartment
-        // }
         return Dep;
     },
     setDefaultBusiness: async function(business){

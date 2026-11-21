@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const createCommand = require('../commands/commandHandler');
+const createCommand = require('../commands/commandHandler.js');
 
 module.exports = function loadCommands(client) {
     const commandsPath = path.join(__dirname, '../commands');
@@ -24,6 +24,8 @@ module.exports = function loadCommands(client) {
             if (!fs.existsSync(indexPath)) continue;
 
             const metadata = require(indexPath);
+            console.log("Index Path: ", indexPath)
+            console.log("meta: ", metadata)
             const command = createCommand(commandPath, metadata);
 
             client.commands.set(command.data.name, command);

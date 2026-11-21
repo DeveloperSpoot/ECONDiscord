@@ -1,6 +1,13 @@
-const {SimpleEmbed, ErrorEmbed, SelectMenu} = require("../utils/embedUtil");
+const {SimpleEmbed, ErrorEmbed} = require("../../../utils/embedUtil");
 
-const {BusinessHQ, PermManager, UserHQ, NotificationHQ, DepartmentHQ, GuildHQ} = require("../dataCrusher/Headquarters");
+const {PermManager} = require("../../../dataCrusher/Headquarters");
+
+const getActiveEntity = require("../../../DRY/getActiveEntity");
+const {
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    ComponentType,
+} = require("discord.js");
 
 module.exports = {
     configure(subcommand) {
@@ -16,7 +23,10 @@ module.exports = {
     },
 
     async execute(interaction) {
-        // TODO: call DRY.getActiveUser.Business()
+        const {business, busName} = await getActiveEntity.Business(interaction);
+
+        if (business == null) return;
+
         if (
             (await PermManager.Business.checkPerm(
                 business,
