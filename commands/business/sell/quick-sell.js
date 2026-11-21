@@ -23,7 +23,7 @@ module.exports = {
     },
     async execute(interaction) {
 
-        const { business } = await getActiveEntity.Business(interaction)
+        const [ business, busName ] = await getActiveEntity.Business(interaction)
 
         if (business == null) return;
 

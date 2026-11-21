@@ -1,7 +1,7 @@
 const getActiveEntity = require("../../../DRY/getActiveEntity");
 const { ErrorEmbed, SimpleEmbed } = require("../../../utils/embedUtil");
 const { PermManager, UpdateData, UserHQ, RevenueService} = require("../../../dataCrusher/Headquarters.js");
-const mathUtils = require('../utils/mathUtils.js')
+const mathUtils = require('../../../utils/mathUtils.js')
 const {
     ActionRowBuilder,
     StringSelectMenuBuilder,

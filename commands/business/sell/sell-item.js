@@ -80,7 +80,7 @@ module.exports = {
     },
     async execute(interaction) {
 
-        const { business } = await getActiveEntity.Business(interaction)
+        const [ business, busName ] = await getActiveEntity.Business(interaction)
 
         if (business == null) return;
 
@@ -109,7 +109,6 @@ module.exports = {
         let quantity = interaction.options.getNumber("quantity") || 1;
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        const busName = await business.getName();
         const priceOverride =
             interaction.options.getNumber("price-override") || null;
 

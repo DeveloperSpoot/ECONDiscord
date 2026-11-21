@@ -1,7 +1,7 @@
 const getActiveEntity = require("../../../DRY/getActiveEntity");
 const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
 const {PermManager, CreateData, UpdateData, GuildHQ } = require("../../../dataCrusher/Headquarters.js");
-const mathUtils = require('../utils/mathUtils.js')
+const mathUtils = require('../../../utils/mathUtils.js')
 
 module.exports = {
     configure(subcommand) {
