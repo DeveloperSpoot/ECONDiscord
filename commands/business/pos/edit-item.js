@@ -1,6 +1,9 @@
 const getActiveEntity = require("../../../DRY/getActiveEntity");
 const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
 const { PermManager } = require("../../../dataCrusher/Headquarters");
+const {
+    EmbedBuilder
+} = require("discord.js");
 
 module.exports = {
     configure(subcommand) {
@@ -94,7 +97,7 @@ module.exports = {
         const { business } = await getActiveEntity.Business(interaction)
 
         if (business == null) return;
-        
+
         if (
             (await PermManager.Business.checkPerm(
                 business,
@@ -122,7 +125,7 @@ module.exports = {
         const Price = interaction.options.getNumber("price");
         const QuickA = interaction.options.getBoolean("quick-access");
         const Multiple = interaction.options.getBoolean("own-multiple");
-        
+
         let EmbedDesc = "";
 
         if (typeof Name !== "undefined" && Name !== null) {

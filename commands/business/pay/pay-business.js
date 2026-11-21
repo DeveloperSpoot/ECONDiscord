@@ -1,7 +1,7 @@
 const getActiveEntity = require("../../../DRY/getActiveEntity");
 const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
-const { PermManager } = require("../../../dataCrusher/Headquarters");
-const {CreateData, UpdateData, GuildHQ} = require("../../../dataCrusher/Headquarters.js");
+const {PermManager, CreateData, UpdateData, GuildHQ } = require("../../../dataCrusher/Headquarters.js");
+const mathUtils = require('../utils/mathUtils.js')
 
 module.exports = {
     configure(subcommand) {
@@ -28,7 +28,44 @@ module.exports = {
                     .setRequired(true)
             )
     },
+    async autocomplete(interaction) {
 
+        const { business } = await getActiveEntity.Business(interaction)
+
+        if (business == null) return;
+
+        const focusedOption = interaction.options.getFocused(true);
+
+        switch (focusedOption.name) {
+            case "business":
+                {
+                    const choices = await RetrieveData.accountsByType(
+                        interaction,
+                        "business"
+                    );
+                    if (choices.length === 0) {
+                        return await interaction.respond([
+                            {
+                                name: "Error, no businesses exist in this economy.",
+                                value: "Error",
+                            },
+                        ]);
+                    }
+                    const filtered = choices.filter((choice) => {
+                        return choice.name
+                            .toLowerCase()
+                            .startsWith(focusedOption.value.toLowerCase());
+                    });
+                    await interaction.respond(
+                        filtered.map((choice) => ({
+                            name: choice.name,
+                            value: choice.IDENT,
+                        }))
+                    );
+                }
+                break;
+        }
+    },
     async execute(interaction) {
 
         const { business } = await getActiveEntity.Business(interaction)
@@ -49,6 +86,8 @@ module.exports = {
                 "Insufficient perms. Supervisor permission level required."
             );
         }
+
+        await interaction.deferReply();
 
         const busSelected = interaction.options.getString("business");
         const businessToPay = new BusinessHQ(interaction, busSelected);
