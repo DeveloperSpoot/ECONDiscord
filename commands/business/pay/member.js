@@ -1,5 +1,5 @@
-const getActiveEntity = require("../../../DRY/getActiveEntity");
-const { ErrorEmbed, SimpleEmbed } = require("../../../utils/embedUtil");
+const getActiveEntity = require("../../../DRY/getActiveEntity.js");
+const { ErrorEmbed, SimpleEmbed } = require("../../../utils/embedUtil.js");
 const { PermManager, UpdateData, UserHQ, RevenueService} = require("../../../dataCrusher/Headquarters.js");
 const mathUtils = require('../../../utils/mathUtils.js')
 const {
@@ -14,7 +14,7 @@ const {
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName("pay-member")
+            .setName("member")
             .setDescription(
                 "Pay a member from business funds. Goes to user bank."
             )

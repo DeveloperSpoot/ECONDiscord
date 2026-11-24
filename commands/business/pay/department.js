@@ -1,12 +1,12 @@
-const getActiveEntity = require("../../../DRY/getActiveEntity");
-const { ErrorEmbed } = require("../../../utils/embedUtil");
+const getActiveEntity = require("../../../DRY/getActiveEntity.js");
+const { ErrorEmbed } = require("../../../utils/embedUtil.js");
 const { PermManager, RetrieveData, GuildHQ, DepartmentHQ } = require("../../../dataCrusher/Headquarters.js");
 const discord = require("discord.js");
 
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName("pay-department")
+            .setName("department")
             .setDescription("Pay another department using department funds.")
             .addStringOption((option) =>
                 option

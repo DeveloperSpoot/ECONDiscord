@@ -1,12 +1,12 @@
-const getActiveEntity = require("../../../DRY/getActiveEntity");
-const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
+const getActiveEntity = require("../../../DRY/getActiveEntity.js");
+const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil.js");
 const {PermManager, CreateData, UpdateData, GuildHQ } = require("../../../dataCrusher/Headquarters.js");
 const mathUtils = require('../../../utils/mathUtils.js')
 
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName("pay-business")
+            .setName("business")
             .setDescription("Pay a business from business funds.")
             .addStringOption((op) =>
                 op
