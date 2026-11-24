@@ -3,6 +3,7 @@ const { ErrorEmbed } = require("../../utils/embedUtil");
 
 const {
     PermManager,
+    GuildHQ
 } = require("../../dataCrusher/Headquarters");
 const discord = require("discord.js");
 const getActiveEntity = require("../../DRY/getActiveEntity");
@@ -20,6 +21,8 @@ module.exports = {
         if (Department == null) return;
 
         await interaction.deferReply();
+
+        const guildManager = new GuildHQ(interaction)
 
         if (
             (await PermManager.Department.checkPerm(

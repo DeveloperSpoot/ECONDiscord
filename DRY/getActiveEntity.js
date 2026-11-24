@@ -20,7 +20,7 @@ async function Business(interaction) {
                 value: "Error",
             },
         ]);
-        return (null, null)
+        return [null, null]
     };
 
     const activeBus = await activeBusiness.get(`${interaction.IDENT}-${interaction.user.id}`)
@@ -30,7 +30,7 @@ async function Business(interaction) {
             "Please select a business first by using /set business!"
         );
 
-        return (null, null)
+        return [null, null]
     }
 
     const business = new BusinessHQ(
@@ -50,7 +50,7 @@ async function Department(interaction) {
                 value: "Error",
             },
         ]);
-        return (null, null)
+        return [null, null]
     };
 
     const activeDep = await activeDepartment.get(`${interaction.IDENT}-${interaction.user.id}`)
@@ -60,7 +60,7 @@ async function Department(interaction) {
             "Please select a business first by using /set business!"
         );
 
-        return (null, null)
+        return [null, null]
     }
 
     const department = new DepartmentHQ(
@@ -69,7 +69,7 @@ async function Department(interaction) {
     );
     const depName = await department.getName();
 
-    return (department, depName)
+    return [department, depName]
 }
 
 module.exports = { Business, Department }

@@ -1,4 +1,4 @@
 module.exports = {
-    name: 'issue',
-    description: 'Commands related to issuing fines and fees.'
+    name: 'view',
+    description: 'Commands related to viewing fines and fees.'
 };

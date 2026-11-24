@@ -2,6 +2,7 @@ const { ErrorEmbed } = require("../../utils/embedUtil");
 const {
     RetrieveData,
     PermManager,
+    GuildHQ
 } = require("../../dataCrusher/Headquarters");
 const discord = require("discord.js");
 const getActiveEntity = require("../../DRY/getActiveEntity");
@@ -34,8 +35,10 @@ module.exports = {
                 "Insufficient perms. Department-Management permission level required."
             );
         }
-        
+
         await interaction.deferReply();
+
+        const guildManager = new GuildHQ(interaction)
 
         let DepartmentBudget = await Department.getBudget();
         const MaxBal = await Department.getMaxBalance();
