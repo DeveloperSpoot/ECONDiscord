@@ -1,28 +1,24 @@
-const { RetrieveData, CreateData, UpdateData, BusinessHQ } = require("../../../dataCrusher/Headquarters.js");
 const {
-    ActionRowBuilder,
-    SelectMenuBuilder,
-    Interaction,
-    SlashCommandBuilder,
-    ComponentType, EmbedBuilder, AttachmentBuilder,
-    PermissionsBitField, MessageFlags
+EmbedBuilder
 } = require("discord.js");
-const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
-const discord = require("discord.js");
-const { PermManager, DepartmentHQ, NotificationHQ, UserHQ, GuildHQ, EntanglementDrive } = require("../../../dataCrusher/Headquarters");
-const { csvGenerator } = require("../../../utils/csvGenerator");
-const { activeCleanUp } = require("../../../dataCrusher/Headquarters").CacheManager;
+const { ErrorEmbed } = require("../../../utils/embedUtil");
+const { PermManager, GuildHQ } = require("../../../dataCrusher/Headquarters");
 
 
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName('temp')
-            .setDescription('temp desc');
+            .setName("deflate")
+            .setDescription("Deflates ALL prices of ALL items by the inputed percentage.")
+            .addNumberOption(numOp =>
+                numOp.setName("percentage-amount")
+                    .setDescription("The percetnage of which you want to the prices to be deflated by.")
+                    .setRequired(true)
+            )
     },
 
     async execute(interaction) {
-       
+
         if (interaction.IDENT !== interaction.guildId) {
             return await ErrorEmbed(interaction, "Sub Servers of an Entanglement may not manage the treasury. Treasury settings changes and interactions must be conducted on the main server.")
         }
@@ -35,5 +31,21 @@ module.exports = {
         }
 
         const guildManager = new GuildHQ(interaction);
+
+        let amount = interaction.options.getNumber("percentage-amount");
+
+        try {
+            await interaction.deferReply();
+            await guildManager.deflatePrices(amount);
+
+            const successEmbed = new EmbedBuilder()
+                .setDescription(`Successfully deflated all item prices by **-${amount}%**.`)
+                .setColor("Green");
+
+            return interaction.editReply({ embeds: [successEmbed] });
+        } catch (err) {
+            console.log(err)
+            return await ErrorEmbed(interaction, err.message, false, false)
+        }
     }
 };
