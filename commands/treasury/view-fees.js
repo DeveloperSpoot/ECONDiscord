@@ -8,6 +8,7 @@ const { csvGenerator } = require("../../utils/csvGenerator");
 module.exports = {
     configure(subcommand) {
         return subcommand
+            .setName('view-fees')
             .setDescription('View (all) fees issued in the server.')
             .addBooleanOption(viewallOption =>
                 viewallOption.setName('view-all')
