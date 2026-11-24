@@ -5,7 +5,7 @@ const { RetrieveData, CreateData, UpdateData, PermManager, NotificationHQ, Guild
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName('print-money')
+            .setName('print')
             .setDescription('Generates money and places it into the treasury general account for distribution.')
             .addNumberOption((option) =>
                 option
