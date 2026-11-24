@@ -278,7 +278,8 @@ module.exports = {
                         .setName('amount')
                         .setDescription('The amount you wish to fund.')
                         .setAutocomplete(false)
-                        .setRequired(true)))
+                        .setRequired(true))
+        )
 
         //  Starting Balance
         .addSubcommand(subcommand =>
