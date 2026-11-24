@@ -520,16 +520,8 @@ module.exports = {
         switch (interaction.options.getSubcommand()) {
             case 'add': {
 
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-                let ETG = new EntanglementDrive(interaction);
-
-                let ETG_Embed = new EmbedBuilder()
-                    .setColor("Yellow")
-                    .setTitle("Entnaglement Code")
-                    .setDescription(`The Following ETG CODE Must Be Entered Into The ETG Join Command On The Other Server: ||${await ETG.generateEntanglementCode()}||\n\n *One-Time Use, Expires In Two Minutes.*`)
-
-                interaction.editReply({ embeds: [ETG_Embed] })
-            } break;
+        
+} break;
 
             case 'join': {
                 let ETG = new EntanglementDrive(interaction);

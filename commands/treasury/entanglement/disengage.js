@@ -1,28 +1,18 @@
-const { RetrieveData, CreateData, UpdateData, BusinessHQ } = require("../../../dataCrusher/Headquarters.js");
 const {
-    ActionRowBuilder,
-    SelectMenuBuilder,
-    Interaction,
-    SlashCommandBuilder,
-    ComponentType, EmbedBuilder, AttachmentBuilder,
-    PermissionsBitField, MessageFlags
+    EmbedBuilder
 } = require("discord.js");
-const { SimpleEmbed, ErrorEmbed } = require("../../../utils/embedUtil");
-const discord = require("discord.js");
-const { PermManager, DepartmentHQ, NotificationHQ, UserHQ, GuildHQ, EntanglementDrive } = require("../../../dataCrusher/Headquarters");
-const { csvGenerator } = require("../../../utils/csvGenerator");
-const { activeCleanUp } = require("../../../dataCrusher/Headquarters").CacheManager;
-
+const { ErrorEmbed } = require("../../../utils/embedUtil");
+const { PermManager, EntanglementDrive } = require("../../../dataCrusher/Headquarters");
 
 module.exports = {
     configure(subcommand) {
         return subcommand
-            .setName('temp')
-            .setDescription('temp desc');
+            .setName("disengage")
+            .setDescription("Sever entanglement with all servers. This Restores The Treasury And Economy For This Server.")
     },
 
     async execute(interaction) {
-       
+
         if (interaction.IDENT !== interaction.guildId) {
             return await ErrorEmbed(interaction, "Sub Servers of an Entanglement may not manage the treasury. Treasury settings changes and interactions must be conducted on the main server.")
         }
@@ -34,6 +24,21 @@ module.exports = {
             );
         }
 
-        const guildManager = new GuildHQ(interaction);
+        let ETG = new EntanglementDrive(interaction);
+        
+        await interaction.deferReply();
+
+        try {
+            await ETG.disengage();
+            const susEmbed = new EmbedBuilder()
+                .setColor("Green")
+                .setTitle("Disengaged Entanglement")
+                .setDescription("This Server Has Disengaged From All Entanglements. This Server Is Now Operating On It's Own Treasury and Economy.\n\n 🟢 ECON Logging Is Now Available For The Server.")
+            interaction.editReply({ embeds: [susEmbed] });
+        } catch (err) {
+            console.log(err);
+            await ErrorEmbed(interaction, `Disengagement Failed: ${err.message}`)
+        }
+
     }
 };
